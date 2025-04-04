@@ -67,10 +67,39 @@ export class ResultsService {
 
     for (const item of items) {
       // Find the event item
+      console.log(
+        `[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`,
+      );
+      console.log(
+        `[DEBUG] Items disponibles en el evento:`,
+        event.items.map((i) => ({ id: i.id, name: i.name })),
+      );
+
       const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
       if (!eventItem) {
+        // Intento alternativo: si los IDs son string vs number
+        const eventItemAlt = event.items.find(
+          (ei) => String(ei.id) === String(item.eventItemId),
+        );
+        if (eventItemAlt) {
+          console.log(
+            `[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`,
+          );
+          // Crear result item con el item alternativo encontrado
+          const resultItem = this.resultItemsRepository.create({
+            score: item.score,
+            eventItem: eventItemAlt,
+            result,
+          });
+
+          resultItems.push(resultItem);
+          // Calculate weighted score
+          totalScore += (item.score * eventItemAlt.percentage) / 100;
+          continue; // Continuar con el siguiente item
+        }
+
         throw new NotFoundException(
-          `Event item with ID ${item.eventItemId} not found`,
+          `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
         );
       }
 
@@ -91,7 +120,13 @@ export class ResultsService {
     result.items = await this.resultItemsRepository.save(resultItems);
 
     // Update total score
-    result.totalScore = parseFloat(totalScore.toFixed(2));
+    if (createResultDto.totalScore !== undefined) {
+      // Usar el totalScore proporcionado por el frontend
+      result.totalScore = parseFloat(createResultDto.totalScore.toFixed(2));
+    } else {
+      // Calcularlo si no se proporciona
+      result.totalScore = parseFloat(totalScore.toFixed(2));
+    }
     await this.resultsRepository.save(result);
 
     return result;
@@ -191,10 +226,39 @@ export class ResultsService {
 
       for (const item of items) {
         // Find the event item
+        console.log(
+          `[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`,
+        );
+        console.log(
+          `[DEBUG] Items disponibles en el evento:`,
+          event.items.map((i) => ({ id: i.id, name: i.name })),
+        );
+        
         const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
         if (!eventItem) {
+          // Intento alternativo: si los IDs son string vs number
+          const eventItemAlt = event.items.find(
+            (ei) => String(ei.id) === String(item.eventItemId),
+          );
+          if (eventItemAlt) {
+            console.log(
+              `[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`,
+            );
+            // Crear result item con el item alternativo encontrado
+            const resultItem = this.resultItemsRepository.create({
+              score: item.score,
+              eventItem: eventItemAlt,
+              result,
+            });
+
+            resultItems.push(resultItem);
+            // Calculate weighted score
+            totalScore += (item.score * eventItemAlt.percentage) / 100;
+            continue; // Continuar con el siguiente item
+          }
+
           throw new NotFoundException(
-            `Event item with ID ${item.eventItemId} not found`,
+            `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
           );
         }
 
@@ -215,7 +279,13 @@ export class ResultsService {
       result.items = await this.resultItemsRepository.save(resultItems);
 
       // Update total score
-      result.totalScore = parseFloat(totalScore.toFixed(2));
+      if (updateResultDto.totalScore !== undefined) {
+        // Usar el totalScore proporcionado por el frontend
+        result.totalScore = parseFloat(updateResultDto.totalScore.toFixed(2));
+      } else {
+        // Calcularlo si no se proporciona
+        result.totalScore = parseFloat(totalScore.toFixed(2));
+      }
     }
 
     // Handle club update if clubId is provided

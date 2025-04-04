@@ -8,7 +8,10 @@ import {
   Delete,
   UseGuards,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ClubsService } from './clubs.service';
 import { CreateClubDto } from './dto/create-club.dto';
 import { UpdateClubDto } from './dto/update-club.dto';
@@ -20,8 +23,12 @@ export class ClubsController {
   constructor(private readonly clubsService: ClubsService) {}
 
   @Post()
-  create(@Body() createClubDto: CreateClubDto) {
-    return this.clubsService.create(createClubDto);
+  @UseInterceptors(FileInterceptor('shield'))
+  create(
+    @Body() createClubDto: CreateClubDto,
+    @UploadedFile() shield: Express.Multer.File,
+  ) {
+    return this.clubsService.create(createClubDto, shield);
   }
 
   @Get()
@@ -38,8 +45,13 @@ export class ClubsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateClubDto: UpdateClubDto) {
-    return this.clubsService.update(+id, updateClubDto);
+  @UseInterceptors(FileInterceptor('shield'))
+  update(
+    @Param('id') id: string,
+    @Body() updateClubDto: UpdateClubDto,
+    @UploadedFile() shield: Express.Multer.File,
+  ) {
+    return this.clubsService.update(+id, updateClubDto, shield);
   }
 
   @Delete(':id')

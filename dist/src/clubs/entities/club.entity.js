@@ -49,6 +49,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Club.prototype, "isPaid", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Club.prototype, "shieldUrl", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => camp_entity_1.Camp, (camp) => camp.clubs),
     __metadata("design:type", camp_entity_1.Camp)
 ], Club.prototype, "camp", void 0);

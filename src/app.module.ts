@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './common/database/database.module';
+import { CommonModule } from './common/common.module';
 import { CampsModule } from './camps/camps.module';
 import { ClubsModule } from './clubs/clubs.module';
 import { EventsModule } from './events/events.module';
@@ -12,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     DatabaseModule,
+    CommonModule,
     CampsModule,
     ClubsModule,
     EventsModule,

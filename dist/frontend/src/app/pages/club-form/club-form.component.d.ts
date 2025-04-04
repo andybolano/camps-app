@@ -16,11 +16,16 @@ export declare class ClubFormComponent implements OnInit {
     campName: string;
     isLoading: boolean;
     errorMessage: string;
+    shieldFile?: File;
+    shieldPreview?: string;
+    currentShield?: string;
     constructor(fb: FormBuilder, clubService: ClubService, campService: CampService, route: ActivatedRoute, router: Router);
     ngOnInit(): void;
     initForm(): void;
     loadCampData(campId: number): void;
     loadClubData(id: number): void;
+    onShieldChange(event: Event): void;
+    clearShield(): void;
     onSubmit(): void;
     get name(): import("@angular/forms").AbstractControl<any, any>;
     get city(): import("@angular/forms").AbstractControl<any, any>;

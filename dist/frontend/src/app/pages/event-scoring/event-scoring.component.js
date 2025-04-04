@@ -260,56 +260,85 @@ let EventScoringComponent = class EventScoringComponent {
     }
     onSubmit() {
         if (this.scoringForm.invalid || !this.selectedClubId) {
-            this.scoringForm.markAllAsTouched();
+            this.errorMessage = 'Por favor, complete correctamente todos los campos';
             return;
         }
         this.isLoading = true;
         this.errorMessage = '';
         this.successMessage = '';
-        const scoresGroup = this.scoringForm.get('scores');
-        const scores = [];
-        if (this.event && this.event.items) {
-            this.event.items.forEach((item) => {
-                const score = scoresGroup.get(item.id.toString())?.value;
-                if (score !== undefined) {
-                    scores.push({
-                        eventItemId: item.id,
-                        score: score,
-                    });
-                }
-            });
+        const formValue = this.scoringForm.value;
+        console.log('Datos del formulario:', formValue);
+        if (!this.event || !this.event.id) {
+            this.errorMessage = 'Error: No se pudo obtener la información del evento';
+            this.isLoading = false;
+            return;
         }
+        const correctEventId = this.eventId;
+        console.log(`[DEBUG] ID de evento de la ruta: ${correctEventId}, ID del evento cargado: ${this.event.id}`);
+        if (correctEventId !== this.event.id) {
+            console.warn(`[WARNING] Discrepancia entre el ID de evento de la ruta (${correctEventId}) y el evento cargado (${this.event.id})`);
+        }
+        const scores = [];
+        const scoresControl = this.scoringForm.get('scores');
+        if (scoresControl && typeof scoresControl.value === 'object') {
+            console.log('[DEBUG] Formulario completo:', this.scoringForm);
+            console.log('[DEBUG] Controles de puntuación:', scoresControl);
+            console.log('[DEBUG] Todos los items del evento:', this.event?.items);
+            for (const [itemId, score] of Object.entries(scoresControl.value)) {
+                console.log(`[DEBUG] Procesando item ID=${itemId}, score=${score}`);
+                const eventItem = this.event?.items?.find((item) => item.id?.toString() === itemId);
+                console.log(`[DEBUG] Item encontrado en evento:`, eventItem);
+                if (!eventItem) {
+                    console.error(`[ERROR] No se encontró el item con ID ${itemId} en el evento ${this.event.id}`);
+                    this.errorMessage = `Error: El ítem con ID ${itemId} no pertenece al evento seleccionado`;
+                    this.isLoading = false;
+                    return;
+                }
+                scores.push({
+                    eventItemId: Number(itemId),
+                    score: Number(score),
+                });
+            }
+        }
+        console.log('[DEBUG] Array final de puntuaciones a enviar:', scores);
+        const totalScore = this.calculateTotalScore() || 0;
         const resultData = {
-            eventId: this.eventId,
+            eventId: correctEventId,
             clubId: this.selectedClubId,
             scores: scores,
-            totalScore: this.totalScore,
+            totalScore: totalScore,
         };
         if (this.existingResult && this.existingResult.id) {
+            console.log(`Actualizando resultado existente con ID ${this.existingResult.id}, eventId=${this.existingResult.eventId}`);
             this.resultService
                 .updateResult(this.existingResult.id, resultData)
                 .subscribe({
-                next: () => {
-                    this.successMessage = 'Calificaciones guardadas exitosamente.';
+                next: (result) => {
+                    console.log('Resultado actualizado correctamente:', result);
+                    this.successMessage = 'Puntuación actualizada correctamente';
                     this.isLoading = false;
                     this.loadEventResults();
                 },
                 error: (error) => {
-                    this.errorMessage = `Error al guardar las calificaciones: ${error.message}`;
+                    console.error('Error al actualizar resultado:', error);
+                    this.errorMessage = `Error al actualizar la puntuación: ${error.error?.message || error.message || 'Error desconocido'}`;
                     this.isLoading = false;
                 },
             });
         }
         else {
+            console.log('Creando nuevo resultado');
             this.resultService.createResult(resultData).subscribe({
-                next: () => {
-                    this.successMessage = 'Calificaciones guardadas exitosamente.';
+                next: (result) => {
+                    console.log('Resultado creado correctamente:', result);
+                    this.successMessage = 'Puntuación guardada correctamente';
                     this.isLoading = false;
-                    this.checkExistingResult(this.eventId, this.selectedClubId);
+                    this.existingResult = result;
                     this.loadEventResults();
                 },
                 error: (error) => {
-                    this.errorMessage = `Error al guardar las calificaciones: ${error.message}`;
+                    console.error('Error al crear resultado:', error);
+                    this.errorMessage = `Error al guardar la puntuación: ${error.error?.message || error.message || 'Error desconocido'}`;
                     this.isLoading = false;
                 },
             });
@@ -327,12 +356,12 @@ let EventScoringComponent = class EventScoringComponent {
     calculateTotalScore() {
         if (!this.event || !this.event.items || this.event.items.length === 0) {
             this.totalScore = 0;
-            return;
+            return 0;
         }
         const scoresGroup = this.scoringForm.get('scores');
         if (!scoresGroup) {
             this.totalScore = 0;
-            return;
+            return 0;
         }
         let totalScore = 0;
         let totalPercentage = 0;
@@ -352,6 +381,7 @@ let EventScoringComponent = class EventScoringComponent {
         }
         this.totalScore = totalScore;
         console.log('Puntuación total calculada:', this.totalScore);
+        return totalScore;
     }
     getRankSuffix(rank) {
         if (rank === 1)

@@ -30,4 +30,5 @@ export declare class ResultService {
     private normalizeResult;
     private normalizeResults;
     getResultsByEventWithRanking(eventId: number): Observable<Result[]>;
+    getClubRankingByCamp(campId: number): Observable<any[]>;
 }

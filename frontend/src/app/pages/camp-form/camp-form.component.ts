@@ -22,6 +22,9 @@ export class CampFormComponent implements OnInit {
   campId?: number;
   isLoading = false;
   errorMessage = '';
+  logoFile?: File;
+  logoPreview?: string;
+  currentLogo?: string;
 
   constructor(
     private fb: FormBuilder,
@@ -73,6 +76,13 @@ export class CampFormComponent implements OnInit {
           endDate: endDate,
           description: camp.description || '',
         });
+
+        // Guardar la URL del logo actual si existe
+        if (camp.logoUrl) {
+          this.currentLogo = camp.logoUrl;
+          console.log('URL del logo cargada:', this.currentLogo);
+        }
+
         this.isLoading = false;
       },
       error: (error) => {
@@ -81,6 +91,19 @@ export class CampFormComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  onLogoChange(event: Event): void {
+    const inputElement = event.target as HTMLInputElement;
+    if (inputElement.files && inputElement.files.length > 0) {
+      this.logoFile = inputElement.files[0];
+
+      // Crear una URL para previsualizar la imagen
+      if (this.logoPreview) {
+        URL.revokeObjectURL(this.logoPreview); // Liberar memoria
+      }
+      this.logoPreview = URL.createObjectURL(this.logoFile);
+    }
   }
 
   onSubmit(): void {
@@ -95,20 +118,22 @@ export class CampFormComponent implements OnInit {
 
     if (this.isEditMode && this.campId) {
       // Actualizar campamento existente
-      this.campService.updateCamp(this.campId, formData).subscribe({
-        next: () => {
-          this.isLoading = false;
-          this.router.navigate(['/camps']);
-        },
-        error: (error) => {
-          this.errorMessage =
-            'Error al actualizar el campamento: ' + error.message;
-          this.isLoading = false;
-        },
-      });
+      this.campService
+        .updateCamp(this.campId, formData, this.logoFile)
+        .subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.router.navigate(['/camps']);
+          },
+          error: (error) => {
+            this.errorMessage =
+              'Error al actualizar el campamento: ' + error.message;
+            this.isLoading = false;
+          },
+        });
     } else {
       // Crear nuevo campamento
-      this.campService.createCamp(formData).subscribe({
+      this.campService.createCamp(formData, this.logoFile).subscribe({
         next: () => {
           this.isLoading = false;
           this.router.navigate(['/camps']);
@@ -118,6 +143,15 @@ export class CampFormComponent implements OnInit {
           this.isLoading = false;
         },
       });
+    }
+  }
+
+  // Método para limpiar la imagen seleccionada
+  clearLogo(): void {
+    this.logoFile = undefined;
+    if (this.logoPreview) {
+      URL.revokeObjectURL(this.logoPreview);
+      this.logoPreview = undefined;
     }
   }
 

@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClubsController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const clubs_service_1 = require("./clubs.service");
 const create_club_dto_1 = require("./dto/create-club.dto");
 const update_club_dto_1 = require("./dto/update-club.dto");
@@ -22,8 +23,8 @@ let ClubsController = class ClubsController {
     constructor(clubsService) {
         this.clubsService = clubsService;
     }
-    create(createClubDto) {
-        return this.clubsService.create(createClubDto);
+    create(createClubDto, shield) {
+        return this.clubsService.create(createClubDto, shield);
     }
     findAll(campId) {
         if (campId) {
@@ -34,8 +35,8 @@ let ClubsController = class ClubsController {
     findOne(id) {
         return this.clubsService.findOne(+id);
     }
-    update(id, updateClubDto) {
-        return this.clubsService.update(+id, updateClubDto);
+    update(id, updateClubDto, shield) {
+        return this.clubsService.update(+id, updateClubDto, shield);
     }
     remove(id) {
         return this.clubsService.remove(+id);
@@ -44,9 +45,11 @@ let ClubsController = class ClubsController {
 exports.ClubsController = ClubsController;
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('shield')),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_club_dto_1.CreateClubDto]),
+    __metadata("design:paramtypes", [create_club_dto_1.CreateClubDto, Object]),
     __metadata("design:returntype", void 0)
 ], ClubsController.prototype, "create", null);
 __decorate([
@@ -65,10 +68,12 @@ __decorate([
 ], ClubsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('shield')),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_club_dto_1.UpdateClubDto]),
+    __metadata("design:paramtypes", [String, update_club_dto_1.UpdateClubDto, Object]),
     __metadata("design:returntype", void 0)
 ], ClubsController.prototype, "update", null);
 __decorate([

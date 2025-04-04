@@ -25,6 +25,9 @@ export class ClubFormComponent implements OnInit {
   campName = 'Cargando...';
   isLoading = false;
   errorMessage = '';
+  shieldFile?: File;
+  shieldPreview?: string;
+  currentShield?: string;
 
   constructor(
     private fb: FormBuilder,
@@ -92,6 +95,13 @@ export class ClubFormComponent implements OnInit {
           registrationFee: club.registrationFee,
           isPaid: club.isPaid,
         });
+
+        // Guardar la URL del escudo actual si existe
+        if (club.shieldUrl) {
+          this.currentShield = club.shieldUrl;
+          console.log('URL del escudo cargada:', this.currentShield);
+        }
+
         this.isLoading = false;
       },
       error: (error) => {
@@ -100,6 +110,27 @@ export class ClubFormComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  onShieldChange(event: Event): void {
+    const inputElement = event.target as HTMLInputElement;
+    if (inputElement.files && inputElement.files.length > 0) {
+      this.shieldFile = inputElement.files[0];
+
+      // Crear una URL para previsualizar la imagen
+      if (this.shieldPreview) {
+        URL.revokeObjectURL(this.shieldPreview); // Liberar memoria
+      }
+      this.shieldPreview = URL.createObjectURL(this.shieldFile);
+    }
+  }
+
+  clearShield(): void {
+    this.shieldFile = undefined;
+    if (this.shieldPreview) {
+      URL.revokeObjectURL(this.shieldPreview);
+      this.shieldPreview = undefined;
+    }
   }
 
   onSubmit(): void {
@@ -117,19 +148,21 @@ export class ClubFormComponent implements OnInit {
 
     if (this.isEditMode && this.clubId) {
       // Actualizar club existente
-      this.clubService.updateClub(this.clubId, formData).subscribe({
-        next: () => {
-          this.isLoading = false;
-          this.router.navigate(['/camps', this.campId, 'clubs']);
-        },
-        error: (error) => {
-          this.errorMessage = 'Error al actualizar el club: ' + error.message;
-          this.isLoading = false;
-        },
-      });
+      this.clubService
+        .updateClub(this.clubId, formData, this.shieldFile)
+        .subscribe({
+          next: () => {
+            this.isLoading = false;
+            this.router.navigate(['/camps', this.campId, 'clubs']);
+          },
+          error: (error) => {
+            this.errorMessage = 'Error al actualizar el club: ' + error.message;
+            this.isLoading = false;
+          },
+        });
     } else {
       // Crear nuevo club
-      this.clubService.createClub(formData).subscribe({
+      this.clubService.createClub(formData, this.shieldFile).subscribe({
         next: () => {
           this.isLoading = false;
           this.router.navigate(['/camps', this.campId, 'clubs']);

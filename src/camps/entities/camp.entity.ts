@@ -22,6 +22,9 @@ export class Camp {
   @Column({ nullable: true })
   description: string;
 
+  @Column({ nullable: true })
+  logoUrl: string;
+
   @OneToMany(() => Club, (club) => club.camp)
   clubs: Club[];
 

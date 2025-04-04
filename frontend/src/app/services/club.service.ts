@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface Club {
@@ -12,6 +12,7 @@ export interface Club {
   economsCount: number;
   registrationFee: number;
   isPaid: boolean;
+  shieldUrl?: string;
   camp: {
     id: number;
     name: string;
@@ -26,6 +27,7 @@ export interface CreateClubDto {
   economsCount: number;
   registrationFee: number;
   isPaid?: boolean;
+  shieldUrl?: string;
   campId: number;
 }
 
@@ -34,27 +36,94 @@ export interface CreateClubDto {
 })
 export class ClubService {
   private apiUrl = `${environment.apiBaseUrl}/clubs`;
+  private baseUrl = environment.apiBaseUrl.split('/api')[0]; // Obtener la URL base sin /api
 
   constructor(private http: HttpClient) {}
 
+  // Método auxiliar para convertir las URLs relativas en URLs absolutas
+  private processShieldUrl(club: Club): Club {
+    if (club.shieldUrl && !club.shieldUrl.startsWith('http')) {
+      // Si la URL no comienza con http, entonces es relativa
+      club.shieldUrl = `${this.baseUrl}/${club.shieldUrl}`;
+    }
+    return club;
+  }
+
   getClubs(): Observable<Club[]> {
-    return this.http.get<Club[]>(this.apiUrl);
+    return this.http
+      .get<Club[]>(this.apiUrl)
+      .pipe(map((clubs) => clubs.map((club) => this.processShieldUrl(club))));
   }
 
   getClubsByCamp(campId: number): Observable<Club[]> {
-    return this.http.get<Club[]>(`${this.apiUrl}?campId=${campId}`);
+    return this.http
+      .get<Club[]>(`${this.apiUrl}?campId=${campId}`)
+      .pipe(map((clubs) => clubs.map((club) => this.processShieldUrl(club))));
   }
 
   getClub(id: number): Observable<Club> {
-    return this.http.get<Club>(`${this.apiUrl}/${id}`);
+    return this.http
+      .get<Club>(`${this.apiUrl}/${id}`)
+      .pipe(map((club) => this.processShieldUrl(club)));
   }
 
-  createClub(club: CreateClubDto): Observable<Club> {
-    return this.http.post<Club>(this.apiUrl, club);
+  createClub(club: CreateClubDto, shield?: File): Observable<Club> {
+    const formData = new FormData();
+
+    // Agregar los campos del formulario
+    formData.append('name', club.name);
+    formData.append('city', club.city);
+    formData.append('participantsCount', club.participantsCount.toString());
+    formData.append('guestsCount', club.guestsCount.toString());
+    formData.append('economsCount', club.economsCount.toString());
+    formData.append('registrationFee', club.registrationFee.toString());
+    formData.append('campId', club.campId.toString());
+
+    if (club.isPaid !== undefined) {
+      formData.append('isPaid', club.isPaid.toString());
+    }
+
+    // Agregar el escudo si existe
+    if (shield) {
+      formData.append('shield', shield);
+    }
+
+    return this.http
+      .post<Club>(this.apiUrl, formData)
+      .pipe(map((club) => this.processShieldUrl(club)));
   }
 
-  updateClub(id: number, club: Partial<CreateClubDto>): Observable<Club> {
-    return this.http.patch<Club>(`${this.apiUrl}/${id}`, club);
+  updateClub(
+    id: number,
+    club: Partial<CreateClubDto>,
+    shield?: File,
+  ): Observable<Club> {
+    const formData = new FormData();
+
+    // Agregar solo los campos que están presentes
+    if (club.name !== undefined) formData.append('name', club.name);
+    if (club.city !== undefined) formData.append('city', club.city);
+    if (club.participantsCount !== undefined)
+      formData.append('participantsCount', club.participantsCount.toString());
+    if (club.guestsCount !== undefined)
+      formData.append('guestsCount', club.guestsCount.toString());
+    if (club.economsCount !== undefined)
+      formData.append('economsCount', club.economsCount.toString());
+    if (club.registrationFee !== undefined)
+      formData.append('registrationFee', club.registrationFee.toString());
+    if (club.isPaid !== undefined)
+      formData.append('isPaid', club.isPaid.toString());
+    if (club.campId !== undefined)
+      formData.append('campId', club.campId.toString());
+
+    // Agregar el escudo si existe
+    if (shield) {
+      formData.append('shield', shield);
+    }
+
+    return this.http
+      .patch<Club>(`${this.apiUrl}/${id}`, formData)
+      .pipe(map((club) => this.processShieldUrl(club)));
   }
 
   deleteClub(id: number): Observable<void> {

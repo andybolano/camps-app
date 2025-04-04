@@ -81,6 +81,14 @@ export const routes: Routes = [
         (c) => c.EventScoringComponent,
       ),
   },
+  {
+    path: 'camps/:campId/ranking',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/camp-ranking/camp-ranking.component').then(
+        (c) => c.CampRankingComponent,
+      ),
+  },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' },
 ];

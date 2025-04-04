@@ -41,6 +41,10 @@ __decorate([
     __metadata("design:type", String)
 ], Camp.prototype, "description", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], Camp.prototype, "logoUrl", void 0);
+__decorate([
     (0, typeorm_1.OneToMany)(() => club_entity_1.Club, (club) => club.camp),
     __metadata("design:type", Array)
 ], Camp.prototype, "clubs", void 0);

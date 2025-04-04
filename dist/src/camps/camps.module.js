@@ -12,12 +12,13 @@ const typeorm_1 = require("@nestjs/typeorm");
 const camps_service_1 = require("./camps.service");
 const camps_controller_1 = require("./camps.controller");
 const camp_entity_1 = require("./entities/camp.entity");
+const common_module_1 = require("../common/common.module");
 let CampsModule = class CampsModule {
 };
 exports.CampsModule = CampsModule;
 exports.CampsModule = CampsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([camp_entity_1.Camp])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([camp_entity_1.Camp]), common_module_1.CommonModule],
         controllers: [camps_controller_1.CampsController],
         providers: [camps_service_1.CampsService],
         exports: [camps_service_1.CampsService],

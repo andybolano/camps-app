@@ -62,6 +62,10 @@ let CampFormComponent = class CampFormComponent {
                     endDate: endDate,
                     description: camp.description || '',
                 });
+                if (camp.logoUrl) {
+                    this.currentLogo = camp.logoUrl;
+                    console.log('URL del logo cargada:', this.currentLogo);
+                }
                 this.isLoading = false;
             },
             error: (error) => {
@@ -71,6 +75,16 @@ let CampFormComponent = class CampFormComponent {
             },
         });
     }
+    onLogoChange(event) {
+        const inputElement = event.target;
+        if (inputElement.files && inputElement.files.length > 0) {
+            this.logoFile = inputElement.files[0];
+            if (this.logoPreview) {
+                URL.revokeObjectURL(this.logoPreview);
+            }
+            this.logoPreview = URL.createObjectURL(this.logoFile);
+        }
+    }
     onSubmit() {
         if (this.campForm.invalid) {
             return;
@@ -79,7 +93,9 @@ let CampFormComponent = class CampFormComponent {
         this.errorMessage = '';
         const formData = this.campForm.value;
         if (this.isEditMode && this.campId) {
-            this.campService.updateCamp(this.campId, formData).subscribe({
+            this.campService
+                .updateCamp(this.campId, formData, this.logoFile)
+                .subscribe({
                 next: () => {
                     this.isLoading = false;
                     this.router.navigate(['/camps']);
@@ -92,7 +108,7 @@ let CampFormComponent = class CampFormComponent {
             });
         }
         else {
-            this.campService.createCamp(formData).subscribe({
+            this.campService.createCamp(formData, this.logoFile).subscribe({
                 next: () => {
                     this.isLoading = false;
                     this.router.navigate(['/camps']);
@@ -102,6 +118,13 @@ let CampFormComponent = class CampFormComponent {
                     this.isLoading = false;
                 },
             });
+        }
+    }
+    clearLogo() {
+        this.logoFile = undefined;
+        if (this.logoPreview) {
+            URL.revokeObjectURL(this.logoPreview);
+            this.logoPreview = undefined;
         }
     }
     get name() {

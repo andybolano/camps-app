@@ -62,13 +62,23 @@ let ResultService = class ResultService {
         if (result) {
             if (result.items && !result.scores) {
                 console.log('Estructura de items del backend:', result.items);
-                result.scores = (result.items || []).map((item) => {
+                const eventId = result.eventId || (result.event?.id);
+                result.scores = (result.items || [])
+                    .filter((item) => {
+                    const itemEventId = item.eventItem?.event?.id;
+                    if (itemEventId && eventId && itemEventId !== eventId) {
+                        console.warn(`[WARNING] Item ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`);
+                        return false;
+                    }
+                    return true;
+                })
+                    .map((item) => {
                     return {
                         eventItemId: item.eventItem?.id || 0,
                         score: item.score,
                     };
                 });
-                console.log('Items convertidos a scores:', result.scores);
+                console.log('Items convertidos a scores (después de filtrar):', result.scores);
             }
         }
         console.log('Resultado normalizado:', result);
@@ -84,6 +94,12 @@ let ResultService = class ResultService {
                 ...result,
                 rank: index + 1,
             }));
+        }));
+    }
+    getClubRankingByCamp(campId) {
+        return this.http.get(`${this.apiUrl}/ranking/${campId}`).pipe((0, operators_1.map)((rankingData) => {
+            console.log('Ranking general del campamento:', rankingData);
+            return rankingData;
         }));
     }
 };

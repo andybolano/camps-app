@@ -30,6 +30,13 @@ export class ResultsController {
     @Query('eventId') eventId?: string,
     @Query('campId') campId?: string,
   ) {
+    if (eventId && clubId) {
+      console.log(
+        `[DEBUG] Consultando resultados para eventId=${eventId} y clubId=${clubId}`,
+      );
+      return this.resultsService.findByEventAndClub(+eventId, +clubId);
+    }
+    
     if (clubId) {
       return this.resultsService.findByClub(+clubId);
     }

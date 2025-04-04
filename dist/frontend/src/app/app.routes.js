@@ -57,6 +57,11 @@ exports.routes = [
         canActivate: [auth_guard_1.authGuard],
         loadComponent: () => Promise.resolve().then(() => require('./pages/event-scoring/event-scoring.component')).then((c) => c.EventScoringComponent),
     },
+    {
+        path: 'camps/:campId/ranking',
+        canActivate: [auth_guard_1.authGuard],
+        loadComponent: () => Promise.resolve().then(() => require('./pages/camp-ranking/camp-ranking.component')).then((c) => c.CampRankingComponent),
+    },
     { path: '', redirectTo: '/login', pathMatch: 'full' },
     { path: '**', redirectTo: '/login' },
 ];

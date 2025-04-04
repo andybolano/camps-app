@@ -7,6 +7,7 @@ export declare class Camp {
     startDate: Date;
     endDate: Date;
     description: string;
+    logoUrl: string;
     clubs: Club[];
     events: Event[];
 }

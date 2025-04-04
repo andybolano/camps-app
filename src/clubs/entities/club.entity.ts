@@ -34,6 +34,9 @@ export class Club {
   @Column({ type: 'boolean', default: true })
   isPaid: boolean;
 
+  @Column({ nullable: true })
+  shieldUrl: string;
+
   @ManyToOne(() => Camp, (camp) => camp.clubs)
   camp: Camp;
 

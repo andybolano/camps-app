@@ -27,6 +27,7 @@
     <table *ngIf="!isLoading && clubs.length > 0" class="table table-striped">
       <thead>
         <tr>
+          <th>Escudo</th>
           <th>Nombre</th>
           <th>Ciudad</th>
           <th>Participantes</th>
@@ -40,6 +41,22 @@
       </thead>
       <tbody>
         <tr *ngFor="let club of clubs">
+          <td class="text-center">
+            <div *ngIf="club.shieldUrl" class="club-shield">
+              <img 
+                [src]="club.shieldUrl" 
+                alt="Shield" 
+                class="img-thumbnail" 
+                style="max-height: 40px;"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+              <div style="display: none;" class="club-no-shield">
+                <i class="bi bi-shield" style="font-size: 1.5rem;"></i>
+              </div>
+            </div>
+            <div *ngIf="!club.shieldUrl" class="club-no-shield">
+              <i class="bi bi-shield" style="font-size: 1.5rem;"></i>
+            </div>
+          </td>
           <td>{{ club.name }}</td>
           <td>{{ club.city }}</td>
           <td>{{ club.participantsCount }}</td>
@@ -50,12 +67,13 @@
           </td>
           <td>{{ club.registrationFee | currency }}</td>
           <td>
-            <span
-              class="badge"
-              [ngClass]="club.isPaid ? 'bg-success' : 'bg-danger'"
-            >
-              {{ club.isPaid ? 'Sí' : 'No' }}
-            </span>
+            <i
+              class="bi"
+              [ngClass]="{
+                'bi-check-circle-fill text-success': club.isPaid,
+                'bi-x-circle-fill text-danger': !club.isPaid
+              }"
+            ></i>
           </td>
           <td>
             <div class="btn-group" role="group">

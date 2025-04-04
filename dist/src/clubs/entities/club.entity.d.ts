@@ -9,6 +9,7 @@ export declare class Club {
     economsCount: number;
     registrationFee: number;
     isPaid: boolean;
+    shieldUrl: string;
     camp: Camp;
     results: Result[];
 }

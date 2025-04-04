@@ -9,4 +9,6 @@ export declare class CampsComponent implements OnInit {
     ngOnInit(): void;
     loadCamps(): void;
     onDeleteCamp(id: number): void;
+    hasCampRelatedData(camp: Camp): boolean;
+    getCampDeleteTooltip(camp: Camp): string;
 }

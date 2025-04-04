@@ -7,6 +7,9 @@ export interface Camp {
     startDate: string;
     endDate: string;
     description?: string;
+    logoUrl?: string;
+    clubs?: any[];
+    events?: any[];
 }
 export interface CreateCampDto {
     name: string;
@@ -14,14 +17,17 @@ export interface CreateCampDto {
     startDate: string;
     endDate: string;
     description?: string;
+    logoUrl?: string;
 }
 export declare class CampService {
     private http;
     private apiUrl;
+    private baseUrl;
     constructor(http: HttpClient);
+    private processLogoUrl;
     getCamps(): Observable<Camp[]>;
     getCamp(id: number): Observable<Camp>;
-    createCamp(camp: CreateCampDto): Observable<Camp>;
-    updateCamp(id: number, camp: Partial<CreateCampDto>): Observable<Camp>;
+    createCamp(camp: CreateCampDto, logo?: File): Observable<Camp>;
+    updateCamp(id: number, camp: Partial<CreateCampDto>, logo?: File): Observable<Camp>;
     deleteCamp(id: number): Observable<void>;
 }

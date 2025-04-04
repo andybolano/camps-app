@@ -6,5 +6,6 @@ export declare class CreateClubDto {
     economsCount: number;
     registrationFee: number;
     isPaid?: boolean;
+    shieldUrl?: string;
     campId: number;
 }

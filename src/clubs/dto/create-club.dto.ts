@@ -36,6 +36,10 @@ export class CreateClubDto {
   @IsBoolean()
   isPaid?: boolean;
 
+  @IsOptional()
+  @IsString()
+  shieldUrl?: string;
+
   @IsNotEmpty()
   @IsNumber()
   campId: number;

@@ -26,6 +26,10 @@ let ResultsController = class ResultsController {
         return this.resultsService.create(createResultDto);
     }
     findAll(clubId, eventId, campId) {
+        if (eventId && clubId) {
+            console.log(`[DEBUG] Consultando resultados para eventId=${eventId} y clubId=${clubId}`);
+            return this.resultsService.findByEventAndClub(+eventId, +clubId);
+        }
         if (clubId) {
             return this.resultsService.findByClub(+clubId);
         }

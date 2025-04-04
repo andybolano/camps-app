@@ -12,11 +12,16 @@ export declare class CampFormComponent implements OnInit {
     campId?: number;
     isLoading: boolean;
     errorMessage: string;
+    logoFile?: File;
+    logoPreview?: string;
+    currentLogo?: string;
     constructor(fb: FormBuilder, campService: CampService, route: ActivatedRoute, router: Router);
     ngOnInit(): void;
     initForm(): void;
     loadCampData(id: number): void;
+    onLogoChange(event: Event): void;
     onSubmit(): void;
+    clearLogo(): void;
     get name(): import("@angular/forms").AbstractControl<any, any>;
     get location(): import("@angular/forms").AbstractControl<any, any>;
     get startDate(): import("@angular/forms").AbstractControl<any, any>;

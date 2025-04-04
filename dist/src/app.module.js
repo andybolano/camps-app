@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const database_module_1 = require("./common/database/database.module");
+const common_module_1 = require("./common/common.module");
 const camps_module_1 = require("./camps/camps.module");
 const clubs_module_1 = require("./clubs/clubs.module");
 const events_module_1 = require("./events/events.module");
@@ -24,6 +25,7 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             database_module_1.DatabaseModule,
+            common_module_1.CommonModule,
             camps_module_1.CampsModule,
             clubs_module_1.ClubsModule,
             events_module_1.EventsModule,

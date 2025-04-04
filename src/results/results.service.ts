@@ -67,10 +67,39 @@ export class ResultsService {
 
     for (const item of items) {
       // Find the event item
+      console.log(
+        `[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`,
+      );
+      console.log(
+        `[DEBUG] Items disponibles en el evento:`,
+        event.items.map((i) => ({ id: i.id, name: i.name })),
+      );
+
       const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
       if (!eventItem) {
+        // Intento alternativo: si los IDs son string vs number
+        const eventItemAlt = event.items.find(
+          (ei) => String(ei.id) === String(item.eventItemId),
+        );
+        if (eventItemAlt) {
+          console.log(
+            `[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`,
+          );
+          // Crear result item con el item alternativo encontrado
+          const resultItem = this.resultItemsRepository.create({
+            score: item.score,
+            eventItem: eventItemAlt,
+            result,
+          });
+
+          resultItems.push(resultItem);
+          // Calculate weighted score
+          totalScore += (item.score * eventItemAlt.percentage) / 100;
+          continue; // Continuar con el siguiente item
+        }
+
         throw new NotFoundException(
-          `Event item with ID ${item.eventItemId} not found`,
+          `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
         );
       }
 
@@ -137,6 +166,20 @@ export class ResultsService {
     });
   }
 
+  async findByEventAndClub(eventId: number, clubId: number): Promise<Result[]> {
+    console.log(
+      `[DEBUG] Buscando resultados para evento=${eventId} y club=${clubId}`,
+    );
+
+    return this.resultsRepository.find({
+      where: {
+        event: { id: eventId },
+        club: { id: clubId },
+      },
+      relations: ['club', 'event', 'items', 'items.eventItem'],
+    });
+  }
+
   async findByCamp(campId: number): Promise<Result[]> {
     return this.resultsRepository.find({
       where: { event: { camp: { id: campId } } },
@@ -182,14 +225,44 @@ export class ResultsService {
   async update(id: number, updateResultDto: UpdateResultDto): Promise<Result> {
     const result = await this.findOne(id);
 
+    // Obtener IDs para validación
+    const existingEventId = result.event.id;
+    const requestedEventId = updateResultDto.eventId || existingEventId;
+
+    console.log(
+      `[DEBUG] Actualizando resultado ID=${id}, existingEventId=${existingEventId}, requestedEventId=${requestedEventId}`,
+    );
+
+    // Validar si se está intentando actualizar un resultado para un evento diferente
+    if (
+      updateResultDto.eventId &&
+      updateResultDto.eventId !== existingEventId
+    ) {
+      console.log(
+        `[WARNING] Se está intentando cambiar el evento del resultado de ${existingEventId} a ${updateResultDto.eventId}`,
+      );
+    }
+
     // Handle items update if provided
     const items = updateResultDto.items || (updateResultDto as any).scores;
     if (items && Array.isArray(items) && items.length > 0) {
       // Delete existing result items
       await this.resultItemsRepository.delete({ result: { id } });
 
-      // Get the event for calculating scores
-      const event = await this.eventsService.findOne(result.event.id);
+      // Get the event for calculating scores - use the requested or existing event ID
+      const event = await this.eventsService.findOne(requestedEventId);
+
+      console.log(
+        `[DEBUG] Evento para cálculo de puntuaciones: ID=${event.id}, Nombre=${event.name}`,
+      );
+      console.log(
+        `[DEBUG] Items del evento:`,
+        event.items.map((i) => ({ id: i.id, name: i.name })),
+      );
+      console.log(
+        `[DEBUG] Items enviados para actualizar:`,
+        items.map((i) => ({ eventItemId: i.eventItemId, score: i.score })),
+      );
 
       // Create new result items and calculate total score
       let totalScore = 0;
@@ -197,10 +270,39 @@ export class ResultsService {
 
       for (const item of items) {
         // Find the event item
+        console.log(
+          `[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`,
+        );
+        console.log(
+          `[DEBUG] Items disponibles en el evento:`,
+          event.items.map((i) => ({ id: i.id, name: i.name })),
+        );
+
         const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
         if (!eventItem) {
+          // Intento alternativo: si los IDs son string vs number
+          const eventItemAlt = event.items.find(
+            (ei) => String(ei.id) === String(item.eventItemId),
+          );
+          if (eventItemAlt) {
+            console.log(
+              `[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`,
+            );
+            // Crear result item con el item alternativo encontrado
+            const resultItem = this.resultItemsRepository.create({
+              score: item.score,
+              eventItem: eventItemAlt,
+              result,
+            });
+
+            resultItems.push(resultItem);
+            // Calculate weighted score
+            totalScore += (item.score * eventItemAlt.percentage) / 100;
+            continue; // Continuar con el siguiente item
+          }
+
           throw new NotFoundException(
-            `Event item with ID ${item.eventItemId} not found`,
+            `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
           );
         }
 

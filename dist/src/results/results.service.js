@@ -52,9 +52,23 @@ let ResultsService = class ResultsService {
         let totalScore = 0;
         const resultItems = [];
         for (const item of items) {
+            console.log(`[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`);
+            console.log(`[DEBUG] Items disponibles en el evento:`, event.items.map((i) => ({ id: i.id, name: i.name })));
             const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
             if (!eventItem) {
-                throw new common_1.NotFoundException(`Event item with ID ${item.eventItemId} not found`);
+                const eventItemAlt = event.items.find((ei) => String(ei.id) === String(item.eventItemId));
+                if (eventItemAlt) {
+                    console.log(`[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`);
+                    const resultItem = this.resultItemsRepository.create({
+                        score: item.score,
+                        eventItem: eventItemAlt,
+                        result,
+                    });
+                    resultItems.push(resultItem);
+                    totalScore += (item.score * eventItemAlt.percentage) / 100;
+                    continue;
+                }
+                throw new common_1.NotFoundException(`Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`);
             }
             const resultItem = this.resultItemsRepository.create({
                 score: item.score,
@@ -102,6 +116,16 @@ let ResultsService = class ResultsService {
             order: { totalScore: 'DESC' },
         });
     }
+    async findByEventAndClub(eventId, clubId) {
+        console.log(`[DEBUG] Buscando resultados para evento=${eventId} y club=${clubId}`);
+        return this.resultsRepository.find({
+            where: {
+                event: { id: eventId },
+                club: { id: clubId },
+            },
+            relations: ['club', 'event', 'items', 'items.eventItem'],
+        });
+    }
     async findByCamp(campId) {
         return this.resultsRepository.find({
             where: { event: { camp: { id: campId } } },
@@ -136,16 +160,40 @@ let ResultsService = class ResultsService {
     }
     async update(id, updateResultDto) {
         const result = await this.findOne(id);
+        const existingEventId = result.event.id;
+        const requestedEventId = updateResultDto.eventId || existingEventId;
+        console.log(`[DEBUG] Actualizando resultado ID=${id}, existingEventId=${existingEventId}, requestedEventId=${requestedEventId}`);
+        if (updateResultDto.eventId &&
+            updateResultDto.eventId !== existingEventId) {
+            console.log(`[WARNING] Se está intentando cambiar el evento del resultado de ${existingEventId} a ${updateResultDto.eventId}`);
+        }
         const items = updateResultDto.items || updateResultDto.scores;
         if (items && Array.isArray(items) && items.length > 0) {
             await this.resultItemsRepository.delete({ result: { id } });
-            const event = await this.eventsService.findOne(result.event.id);
+            const event = await this.eventsService.findOne(requestedEventId);
+            console.log(`[DEBUG] Evento para cálculo de puntuaciones: ID=${event.id}, Nombre=${event.name}`);
+            console.log(`[DEBUG] Items del evento:`, event.items.map((i) => ({ id: i.id, name: i.name })));
+            console.log(`[DEBUG] Items enviados para actualizar:`, items.map((i) => ({ eventItemId: i.eventItemId, score: i.score })));
             let totalScore = 0;
             const resultItems = [];
             for (const item of items) {
+                console.log(`[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`);
+                console.log(`[DEBUG] Items disponibles en el evento:`, event.items.map((i) => ({ id: i.id, name: i.name })));
                 const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
                 if (!eventItem) {
-                    throw new common_1.NotFoundException(`Event item with ID ${item.eventItemId} not found`);
+                    const eventItemAlt = event.items.find((ei) => String(ei.id) === String(item.eventItemId));
+                    if (eventItemAlt) {
+                        console.log(`[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`);
+                        const resultItem = this.resultItemsRepository.create({
+                            score: item.score,
+                            eventItem: eventItemAlt,
+                            result,
+                        });
+                        resultItems.push(resultItem);
+                        totalScore += (item.score * eventItemAlt.percentage) / 100;
+                        continue;
+                    }
+                    throw new common_1.NotFoundException(`Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`);
                 }
                 const resultItem = this.resultItemsRepository.create({
                     score: item.score,

@@ -25,4 +25,8 @@ export class CreateCampDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
 }

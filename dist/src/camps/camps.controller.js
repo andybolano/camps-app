@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CampsController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const camps_service_1 = require("./camps.service");
 const create_camp_dto_1 = require("./dto/create-camp.dto");
 const update_camp_dto_1 = require("./dto/update-camp.dto");
@@ -22,17 +23,18 @@ let CampsController = class CampsController {
     constructor(campsService) {
         this.campsService = campsService;
     }
-    create(createCampDto) {
-        return this.campsService.create(createCampDto);
+    create(createCampDto, logo) {
+        return this.campsService.create(createCampDto, logo);
     }
-    findAll() {
-        return this.campsService.findAll();
+    findAll(relations) {
+        const includeRelations = relations === 'true';
+        return this.campsService.findAll(includeRelations);
     }
     findOne(id) {
         return this.campsService.findOne(+id);
     }
-    update(id, updateCampDto) {
-        return this.campsService.update(+id, updateCampDto);
+    update(id, updateCampDto, logo) {
+        return this.campsService.update(+id, updateCampDto, logo);
     }
     remove(id) {
         return this.campsService.remove(+id);
@@ -41,15 +43,18 @@ let CampsController = class CampsController {
 exports.CampsController = CampsController;
 __decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo')),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_camp_dto_1.CreateCampDto]),
+    __metadata("design:paramtypes", [create_camp_dto_1.CreateCampDto, Object]),
     __metadata("design:returntype", void 0)
 ], CampsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('relations')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], CampsController.prototype, "findAll", null);
 __decorate([
@@ -61,10 +66,12 @@ __decorate([
 ], CampsController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('logo')),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.UploadedFile)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_camp_dto_1.UpdateCampDto]),
+    __metadata("design:paramtypes", [String, update_camp_dto_1.UpdateCampDto, Object]),
     __metadata("design:returntype", void 0)
 ], CampsController.prototype, "update", null);
 __decorate([

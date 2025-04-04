@@ -16,6 +16,7 @@ export declare class ResultsService {
     findOne(id: number): Promise<Result>;
     findByClub(clubId: number): Promise<Result[]>;
     findByEvent(eventId: number): Promise<Result[]>;
+    findByEventAndClub(eventId: number, clubId: number): Promise<Result[]>;
     findByCamp(campId: number): Promise<Result[]>;
     getClubRankingByCamp(campId: number): Promise<any[]>;
     update(id: number, updateResultDto: UpdateResultDto): Promise<Result>;

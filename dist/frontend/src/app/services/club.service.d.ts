@@ -9,6 +9,7 @@ export interface Club {
     economsCount: number;
     registrationFee: number;
     isPaid: boolean;
+    shieldUrl?: string;
     camp: {
         id: number;
         name: string;
@@ -22,16 +23,19 @@ export interface CreateClubDto {
     economsCount: number;
     registrationFee: number;
     isPaid?: boolean;
+    shieldUrl?: string;
     campId: number;
 }
 export declare class ClubService {
     private http;
     private apiUrl;
+    private baseUrl;
     constructor(http: HttpClient);
+    private processShieldUrl;
     getClubs(): Observable<Club[]>;
     getClubsByCamp(campId: number): Observable<Club[]>;
     getClub(id: number): Observable<Club>;
-    createClub(club: CreateClubDto): Observable<Club>;
-    updateClub(id: number, club: Partial<CreateClubDto>): Observable<Club>;
+    createClub(club: CreateClubDto, shield?: File): Observable<Club>;
+    updateClub(id: number, club: Partial<CreateClubDto>, shield?: File): Observable<Club>;
     deleteClub(id: number): Observable<void>;
 }

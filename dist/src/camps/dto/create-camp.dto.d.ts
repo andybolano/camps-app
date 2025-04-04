@@ -4,4 +4,5 @@ export declare class CreateCampDto {
     startDate: string;
     endDate: string;
     description?: string;
+    logoUrl?: string;
 }

@@ -96,14 +96,32 @@ export class ResultService {
         console.log('Estructura de items del backend:', (result as any).items);
 
         // Convertir la estructura de items del backend al formato esperado por el frontend
-        result.scores = ((result as any).items || []).map((item: any) => {
-          return {
-            eventItemId: item.eventItem?.id || 0,
-            score: item.score,
-          };
-        });
+        // y verificar que los items pertenezcan al evento correcto
+        const eventId = result.eventId || ((result as any).event?.id);
+        
+        result.scores = ((result as any).items || [])
+          .filter((item: any) => {
+            // Verificar que el eventItem exista y que pertenezca al evento correcto
+            const itemEventId = item.eventItem?.event?.id;
+            if (itemEventId && eventId && itemEventId !== eventId) {
+              console.warn(
+                `[WARNING] Item ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`
+              );
+              return false; // Filtrar este item
+            }
+            return true; // Mantener este item
+          })
+          .map((item: any) => {
+            return {
+              eventItemId: item.eventItem?.id || 0,
+              score: item.score,
+            };
+          });
 
-        console.log('Items convertidos a scores:', result.scores);
+        console.log(
+          'Items convertidos a scores (después de filtrar):',
+          result.scores
+        );
       }
     }
     console.log('Resultado normalizado:', result);
@@ -129,6 +147,16 @@ export class ResultService {
           ...result,
           rank: index + 1, // Posición en el ranking (1-based)
         }));
+      }),
+    );
+  }
+
+  // Obtener el ranking general de los clubes para un campamento
+  getClubRankingByCamp(campId: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/ranking/${campId}`).pipe(
+      map((rankingData) => {
+        console.log('Ranking general del campamento:', rankingData);
+        return rankingData;
       }),
     );
   }

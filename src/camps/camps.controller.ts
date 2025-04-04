@@ -7,7 +7,11 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CampsService } from './camps.service';
 import { CreateCampDto } from './dto/create-camp.dto';
 import { UpdateCampDto } from './dto/update-camp.dto';
@@ -19,13 +23,18 @@ export class CampsController {
   constructor(private readonly campsService: CampsService) {}
 
   @Post()
-  create(@Body() createCampDto: CreateCampDto) {
-    return this.campsService.create(createCampDto);
+  @UseInterceptors(FileInterceptor('logo'))
+  create(
+    @Body() createCampDto: CreateCampDto,
+    @UploadedFile() logo: Express.Multer.File,
+  ) {
+    return this.campsService.create(createCampDto, logo);
   }
 
   @Get()
-  findAll() {
-    return this.campsService.findAll();
+  findAll(@Query('relations') relations?: string) {
+    const includeRelations = relations === 'true';
+    return this.campsService.findAll(includeRelations);
   }
 
   @Get(':id')
@@ -34,8 +43,13 @@ export class CampsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCampDto: UpdateCampDto) {
-    return this.campsService.update(+id, updateCampDto);
+  @UseInterceptors(FileInterceptor('logo'))
+  update(
+    @Param('id') id: string,
+    @Body() updateCampDto: UpdateCampDto,
+    @UploadedFile() logo: Express.Multer.File,
+  ) {
+    return this.campsService.update(+id, updateCampDto, logo);
   }
 
   @Delete(':id')

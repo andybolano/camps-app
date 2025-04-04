@@ -38,7 +38,7 @@ export declare class EventScoringComponent implements OnInit {
     onSubmit(): void;
     goBack(): void;
     reloadExistingScores(): void;
-    calculateTotalScore(): void;
+    calculateTotalScore(): number;
     getRankSuffix(rank: number): string;
     getClubName(clubId: number | null): string;
     getRankBadgeClass(rank: number | undefined): any;

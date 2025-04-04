@@ -79,6 +79,10 @@ let ClubFormComponent = class ClubFormComponent {
                     registrationFee: club.registrationFee,
                     isPaid: club.isPaid,
                 });
+                if (club.shieldUrl) {
+                    this.currentShield = club.shieldUrl;
+                    console.log('URL del escudo cargada:', this.currentShield);
+                }
                 this.isLoading = false;
             },
             error: (error) => {
@@ -87,6 +91,23 @@ let ClubFormComponent = class ClubFormComponent {
                 this.isLoading = false;
             },
         });
+    }
+    onShieldChange(event) {
+        const inputElement = event.target;
+        if (inputElement.files && inputElement.files.length > 0) {
+            this.shieldFile = inputElement.files[0];
+            if (this.shieldPreview) {
+                URL.revokeObjectURL(this.shieldPreview);
+            }
+            this.shieldPreview = URL.createObjectURL(this.shieldFile);
+        }
+    }
+    clearShield() {
+        this.shieldFile = undefined;
+        if (this.shieldPreview) {
+            URL.revokeObjectURL(this.shieldPreview);
+            this.shieldPreview = undefined;
+        }
     }
     onSubmit() {
         if (this.clubForm.invalid) {
@@ -99,7 +120,9 @@ let ClubFormComponent = class ClubFormComponent {
             campId: this.campId,
         };
         if (this.isEditMode && this.clubId) {
-            this.clubService.updateClub(this.clubId, formData).subscribe({
+            this.clubService
+                .updateClub(this.clubId, formData, this.shieldFile)
+                .subscribe({
                 next: () => {
                     this.isLoading = false;
                     this.router.navigate(['/camps', this.campId, 'clubs']);
@@ -111,7 +134,7 @@ let ClubFormComponent = class ClubFormComponent {
             });
         }
         else {
-            this.clubService.createClub(formData).subscribe({
+            this.clubService.createClub(formData, this.shieldFile).subscribe({
                 next: () => {
                     this.isLoading = false;
                     this.router.navigate(['/camps', this.campId, 'clubs']);
