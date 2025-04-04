@@ -19,6 +19,7 @@ export declare class ClubFormComponent implements OnInit {
     shieldFile?: File;
     shieldPreview?: string;
     currentShield?: string;
+    debug: boolean;
     constructor(fb: FormBuilder, clubService: ClubService, campService: CampService, route: ActivatedRoute, router: Router);
     ngOnInit(): void;
     initForm(): void;
@@ -27,6 +28,7 @@ export declare class ClubFormComponent implements OnInit {
     onShieldChange(event: Event): void;
     clearShield(): void;
     onSubmit(): void;
+    onIsPaidChange(event: Event): void;
     get name(): import("@angular/forms").AbstractControl<any, any>;
     get city(): import("@angular/forms").AbstractControl<any, any>;
     get participantsCount(): import("@angular/forms").AbstractControl<any, any>;

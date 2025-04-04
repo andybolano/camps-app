@@ -80,8 +80,10 @@ export class ClubService {
     formData.append('campId', club.campId.toString());
 
     if (club.isPaid !== undefined) {
-      formData.append('isPaid', club.isPaid.toString());
+      formData.append('isPaid', club.isPaid ? '1' : '0');
     }
+
+    console.log('Creating club with isPaid:', club.isPaid);
 
     // Agregar el escudo si existe
     if (shield) {
@@ -112,7 +114,7 @@ export class ClubService {
     if (club.registrationFee !== undefined)
       formData.append('registrationFee', club.registrationFee.toString());
     if (club.isPaid !== undefined)
-      formData.append('isPaid', club.isPaid.toString());
+      formData.append('isPaid', club.isPaid ? '1' : '0');
     if (club.campId !== undefined)
       formData.append('campId', club.campId.toString());
 
@@ -120,6 +122,8 @@ export class ClubService {
     if (shield) {
       formData.append('shield', shield);
     }
+
+    console.log('Updating club with isPaid:', club.isPaid);
 
     return this.http
       .patch<Club>(`${this.apiUrl}/${id}`, formData)

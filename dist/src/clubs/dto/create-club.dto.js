@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateClubDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 class CreateClubDto {
 }
 exports.CreateClubDto = CreateClubDto;
@@ -47,6 +48,13 @@ __decorate([
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsBoolean)(),
+    (0, class_transformer_1.Transform)(({ value }) => {
+        if (value === '1' || value === 'true' || value === true)
+            return true;
+        if (value === '0' || value === 'false' || value === false)
+            return false;
+        return Boolean(value);
+    }),
     __metadata("design:type", Boolean)
 ], CreateClubDto.prototype, "isPaid", void 0);
 __decorate([

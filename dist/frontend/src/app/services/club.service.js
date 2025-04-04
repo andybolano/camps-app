@@ -51,8 +51,9 @@ let ClubService = class ClubService {
         formData.append('registrationFee', club.registrationFee.toString());
         formData.append('campId', club.campId.toString());
         if (club.isPaid !== undefined) {
-            formData.append('isPaid', club.isPaid.toString());
+            formData.append('isPaid', club.isPaid ? '1' : '0');
         }
+        console.log('Creating club with isPaid:', club.isPaid);
         if (shield) {
             formData.append('shield', shield);
         }
@@ -75,12 +76,13 @@ let ClubService = class ClubService {
         if (club.registrationFee !== undefined)
             formData.append('registrationFee', club.registrationFee.toString());
         if (club.isPaid !== undefined)
-            formData.append('isPaid', club.isPaid.toString());
+            formData.append('isPaid', club.isPaid ? '1' : '0');
         if (club.campId !== undefined)
             formData.append('campId', club.campId.toString());
         if (shield) {
             formData.append('shield', shield);
         }
+        console.log('Updating club with isPaid:', club.isPaid);
         return this.http
             .patch(`${this.apiUrl}/${id}`, formData)
             .pipe((0, rxjs_1.map)((club) => this.processShieldUrl(club)));

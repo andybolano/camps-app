@@ -28,6 +28,7 @@ export class ClubFormComponent implements OnInit {
   shieldFile?: File;
   shieldPreview?: string;
   currentShield?: string;
+  debug = true; // Habilitar mensajes de depuración
 
   constructor(
     private fb: FormBuilder,
@@ -146,12 +147,16 @@ export class ClubFormComponent implements OnInit {
       campId: this.campId,
     };
 
+    console.log('Form isPaid value:', this.clubForm.get('isPaid')?.value);
+    console.log('Form data to submit:', formData);
+
     if (this.isEditMode && this.clubId) {
       // Actualizar club existente
       this.clubService
         .updateClub(this.clubId, formData, this.shieldFile)
         .subscribe({
-          next: () => {
+          next: (updatedClub) => {
+            console.log('Club actualizado con isPaid:', updatedClub.isPaid);
             this.isLoading = false;
             this.router.navigate(['/camps', this.campId, 'clubs']);
           },
@@ -163,7 +168,8 @@ export class ClubFormComponent implements OnInit {
     } else {
       // Crear nuevo club
       this.clubService.createClub(formData, this.shieldFile).subscribe({
-        next: () => {
+        next: (newClub) => {
+          console.log('Club creado con isPaid:', newClub.isPaid);
           this.isLoading = false;
           this.router.navigate(['/camps', this.campId, 'clubs']);
         },
@@ -173,6 +179,11 @@ export class ClubFormComponent implements OnInit {
         },
       });
     }
+  }
+
+  onIsPaidChange(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    console.log('isPaid checkbox changed:', target.checked);
   }
 
   // Getters para facilitar el acceso en la plantilla

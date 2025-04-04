@@ -27,6 +27,7 @@ let ClubFormComponent = class ClubFormComponent {
         this.campName = 'Cargando...';
         this.isLoading = false;
         this.errorMessage = '';
+        this.debug = true;
     }
     ngOnInit() {
         this.initForm();
@@ -119,11 +120,14 @@ let ClubFormComponent = class ClubFormComponent {
             ...this.clubForm.value,
             campId: this.campId,
         };
+        console.log('Form isPaid value:', this.clubForm.get('isPaid')?.value);
+        console.log('Form data to submit:', formData);
         if (this.isEditMode && this.clubId) {
             this.clubService
                 .updateClub(this.clubId, formData, this.shieldFile)
                 .subscribe({
-                next: () => {
+                next: (updatedClub) => {
+                    console.log('Club actualizado con isPaid:', updatedClub.isPaid);
                     this.isLoading = false;
                     this.router.navigate(['/camps', this.campId, 'clubs']);
                 },
@@ -135,7 +139,8 @@ let ClubFormComponent = class ClubFormComponent {
         }
         else {
             this.clubService.createClub(formData, this.shieldFile).subscribe({
-                next: () => {
+                next: (newClub) => {
+                    console.log('Club creado con isPaid:', newClub.isPaid);
                     this.isLoading = false;
                     this.router.navigate(['/camps', this.campId, 'clubs']);
                 },
@@ -145,6 +150,10 @@ let ClubFormComponent = class ClubFormComponent {
                 },
             });
         }
+    }
+    onIsPaidChange(event) {
+        const target = event.target;
+        console.log('isPaid checkbox changed:', target.checked);
     }
     get name() {
         return this.clubForm.get('name');

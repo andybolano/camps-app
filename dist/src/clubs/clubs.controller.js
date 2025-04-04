@@ -24,6 +24,12 @@ let ClubsController = class ClubsController {
         this.clubsService = clubsService;
     }
     create(createClubDto, shield) {
+        if (createClubDto.isPaid !== undefined &&
+            typeof createClubDto.isPaid === 'string') {
+            createClubDto.isPaid =
+                createClubDto.isPaid === '1' || createClubDto.isPaid === 'true';
+        }
+        console.log('Creating club with isPaid:', createClubDto.isPaid);
         return this.clubsService.create(createClubDto, shield);
     }
     findAll(campId) {
@@ -36,6 +42,12 @@ let ClubsController = class ClubsController {
         return this.clubsService.findOne(+id);
     }
     update(id, updateClubDto, shield) {
+        if (updateClubDto.isPaid !== undefined &&
+            typeof updateClubDto.isPaid === 'string') {
+            updateClubDto.isPaid =
+                updateClubDto.isPaid === '1' || updateClubDto.isPaid === 'true';
+        }
+        console.log('Updating club with isPaid:', updateClubDto.isPaid);
         return this.clubsService.update(+id, updateClubDto, shield);
     }
     remove(id) {
