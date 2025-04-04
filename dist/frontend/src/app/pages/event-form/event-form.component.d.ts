@@ -1,0 +1,30 @@
+import { OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { FormArray, FormBuilder, FormGroup } from '@angular/forms';
+import { EventService } from '../../services/event.service';
+import { CampService } from '../../services/camp.service';
+export declare class EventFormComponent implements OnInit {
+    private fb;
+    private eventService;
+    private campService;
+    private route;
+    private router;
+    eventForm: FormGroup;
+    campId: number;
+    eventId?: number;
+    isEdit: boolean;
+    isLoading: boolean;
+    errorMessage: string;
+    campName: string;
+    constructor(fb: FormBuilder, eventService: EventService, campService: CampService, route: ActivatedRoute, router: Router);
+    ngOnInit(): void;
+    private initForm;
+    private loadCampData;
+    private loadEventData;
+    get items(): FormArray;
+    addItem(name?: string, percentage?: number): void;
+    removeItem(index: number): void;
+    clearItems(): void;
+    onSubmit(): void;
+    cancel(): void;
+}

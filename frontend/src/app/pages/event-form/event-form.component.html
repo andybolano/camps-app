@@ -1,0 +1,165 @@
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-md-12 mb-4">
+      <h2>{{ isEdit ? 'Editar' : 'Crear' }} Evento</h2>
+      <h5 *ngIf="campName" class="text-muted">Campamento: {{ campName }}</h5>
+    </div>
+
+    <div class="col-md-12">
+      <div *ngIf="isLoading" class="text-center my-5">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Cargando...</span>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger">
+        {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" *ngIf="!isLoading">
+        <!-- Datos básicos del evento -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Información del Evento</h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="name" class="form-label">Nombre del Evento*</label>
+              <input
+                type="text"
+                class="form-control"
+                id="name"
+                formControlName="name"
+                [class.is-invalid]="
+                  eventForm.get('name')?.invalid &&
+                  eventForm.get('name')?.touched
+                "
+              />
+              <div
+                class="invalid-feedback"
+                *ngIf="
+                  eventForm.get('name')?.invalid &&
+                  eventForm.get('name')?.touched
+                "
+              >
+                El nombre del evento es obligatorio.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="description" class="form-label">Descripción</label>
+              <textarea
+                class="form-control"
+                id="description"
+                rows="3"
+                formControlName="description"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Planilla de calificación (ítems) -->
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Planilla de Calificación</h5>
+            <button
+              type="button"
+              class="btn btn-sm btn-success"
+              (click)="addItem()"
+            >
+              Añadir Ítem de Calificación
+            </button>
+          </div>
+          <div class="card-body">
+            <div *ngIf="items.length === 0" class="alert alert-info">
+              No hay ítems definidos en la planilla de calificación. Haga clic
+              en "Añadir Ítem de Calificación" para crear uno.
+            </div>
+
+            <div formArrayName="items">
+              <div
+                *ngFor="let item of items.controls; let i = index"
+                [formGroupName]="i"
+                class="row mb-3 align-items-end border-bottom pb-3"
+              >
+                <div class="col-md-5">
+                  <label [for]="'itemName' + i" class="form-label"
+                    >Nombre del Ítem*</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    [id]="'itemName' + i"
+                    formControlName="name"
+                    [class.is-invalid]="
+                      item.get('name')?.invalid && item.get('name')?.touched
+                    "
+                  />
+                  <div
+                    class="invalid-feedback"
+                    *ngIf="
+                      item.get('name')?.invalid && item.get('name')?.touched
+                    "
+                  >
+                    El nombre del ítem es obligatorio.
+                  </div>
+                </div>
+
+                <div class="col-md-5">
+                  <label [for]="'itemPoints' + i" class="form-label"
+                    >Porcentaje (%)*</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    [id]="'itemPoints' + i"
+                    formControlName="percentage"
+                    min="0"
+                    max="100"
+                    [class.is-invalid]="
+                      item.get('percentage')?.invalid &&
+                      item.get('percentage')?.touched
+                    "
+                  />
+                  <div
+                    class="invalid-feedback"
+                    *ngIf="
+                      item.get('percentage')?.invalid &&
+                      item.get('percentage')?.touched
+                    "
+                  >
+                    El porcentaje debe ser un número entre 0 y 100.
+                  </div>
+                </div>
+
+                <div class="col-md-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger"
+                    (click)="removeItem(i)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-secondary" (click)="cancel()">
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="eventForm.invalid"
+          >
+            {{ isEdit ? 'Actualizar' : 'Crear' }} Evento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

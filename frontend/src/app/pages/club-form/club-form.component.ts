@@ -1,0 +1,167 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import {
+  FormBuilder,
+  FormGroup,
+  Validators,
+  ReactiveFormsModule,
+} from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ClubService, CreateClubDto } from '../../services/club.service';
+import { CampService } from '../../services/camp.service';
+
+@Component({
+  selector: 'app-club-form',
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  templateUrl: './club-form.component.html',
+  styleUrl: './club-form.component.scss',
+})
+export class ClubFormComponent implements OnInit {
+  clubForm!: FormGroup;
+  isEditMode = false;
+  clubId?: number;
+  campId!: number;
+  campName = 'Cargando...';
+  isLoading = false;
+  errorMessage = '';
+
+  constructor(
+    private fb: FormBuilder,
+    private clubService: ClubService,
+    private campService: CampService,
+    private route: ActivatedRoute,
+    private router: Router,
+  ) {}
+
+  ngOnInit(): void {
+    this.initForm();
+
+    // Obtener campId
+    this.route.paramMap.subscribe((params) => {
+      const campId = params.get('campId');
+      if (campId) {
+        this.campId = +campId;
+        this.loadCampData(this.campId);
+
+        // Verificar si estamos en modo edición
+        const id = params.get('id');
+        if (id) {
+          this.isEditMode = true;
+          this.clubId = +id;
+          this.loadClubData(this.clubId);
+        }
+      }
+    });
+  }
+
+  initForm(): void {
+    this.clubForm = this.fb.group({
+      name: ['', [Validators.required]],
+      city: ['', [Validators.required]],
+      participantsCount: [0, [Validators.required, Validators.min(0)]],
+      guestsCount: [0, [Validators.required, Validators.min(0)]],
+      economsCount: [0, [Validators.required, Validators.min(0)]],
+      registrationFee: [0, [Validators.required, Validators.min(0)]],
+      isPaid: [false],
+    });
+  }
+
+  loadCampData(campId: number): void {
+    this.campService.getCamp(campId).subscribe({
+      next: (camp) => {
+        this.campName = camp.name;
+      },
+      error: (error) => {
+        this.errorMessage =
+          'Error al cargar los datos del campamento: ' + error.message;
+      },
+    });
+  }
+
+  loadClubData(id: number): void {
+    this.isLoading = true;
+    this.clubService.getClub(id).subscribe({
+      next: (club) => {
+        this.clubForm.setValue({
+          name: club.name,
+          city: club.city,
+          participantsCount: club.participantsCount,
+          guestsCount: club.guestsCount,
+          economsCount: club.economsCount,
+          registrationFee: club.registrationFee,
+          isPaid: club.isPaid,
+        });
+        this.isLoading = false;
+      },
+      error: (error) => {
+        this.errorMessage =
+          'Error al cargar los datos del club: ' + error.message;
+        this.isLoading = false;
+      },
+    });
+  }
+
+  onSubmit(): void {
+    if (this.clubForm.invalid) {
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    const formData: CreateClubDto = {
+      ...this.clubForm.value,
+      campId: this.campId,
+    };
+
+    if (this.isEditMode && this.clubId) {
+      // Actualizar club existente
+      this.clubService.updateClub(this.clubId, formData).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/camps', this.campId, 'clubs']);
+        },
+        error: (error) => {
+          this.errorMessage = 'Error al actualizar el club: ' + error.message;
+          this.isLoading = false;
+        },
+      });
+    } else {
+      // Crear nuevo club
+      this.clubService.createClub(formData).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/camps', this.campId, 'clubs']);
+        },
+        error: (error) => {
+          this.errorMessage = 'Error al crear el club: ' + error.message;
+          this.isLoading = false;
+        },
+      });
+    }
+  }
+
+  // Getters para facilitar el acceso en la plantilla
+  get name() {
+    return this.clubForm.get('name');
+  }
+  get city() {
+    return this.clubForm.get('city');
+  }
+  get participantsCount() {
+    return this.clubForm.get('participantsCount');
+  }
+  get guestsCount() {
+    return this.clubForm.get('guestsCount');
+  }
+  get economsCount() {
+    return this.clubForm.get('economsCount');
+  }
+  get registrationFee() {
+    return this.clubForm.get('registrationFee');
+  }
+  get isPaid() {
+    return this.clubForm.get('isPaid');
+  }
+}
