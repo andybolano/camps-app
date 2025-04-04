@@ -362,6 +362,22 @@ let EventScoringComponent = class EventScoringComponent {
             return 'er';
         return 'to';
     }
+    getClubName(clubId) {
+        if (!clubId)
+            return '';
+        const club = this.clubs.find((c) => c.id === clubId);
+        return club?.name || '';
+    }
+    getRankBadgeClass(rank) {
+        if (!rank)
+            return 'bg-secondary';
+        return {
+            'bg-success': rank === 1,
+            'bg-primary': rank === 2,
+            'bg-info': rank === 3,
+            'bg-secondary': rank > 3,
+        };
+    }
 };
 exports.EventScoringComponent = EventScoringComponent;
 exports.EventScoringComponent = EventScoringComponent = __decorate([

@@ -463,4 +463,23 @@ export class EventScoringComponent implements OnInit {
     if (rank === 3) return 'er';
     return 'to';
   }
+
+  // Método para obtener el nombre de un club por su ID
+  getClubName(clubId: number | null): string {
+    if (!clubId) return '';
+    const club = this.clubs.find((c) => c.id === clubId);
+    return club?.name || '';
+  }
+
+  // Método para obtener la clase CSS para la insignia de ranking
+  getRankBadgeClass(rank: number | undefined): any {
+    if (!rank) return 'bg-secondary';
+
+    return {
+      'bg-success': rank === 1,
+      'bg-primary': rank === 2,
+      'bg-info': rank === 3,
+      'bg-secondary': rank > 3,
+    };
+  }
 }
