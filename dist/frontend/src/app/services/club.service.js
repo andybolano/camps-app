@@ -47,6 +47,7 @@ let ClubService = class ClubService {
         formData.append('city', club.city);
         formData.append('participantsCount', club.participantsCount.toString());
         formData.append('guestsCount', club.guestsCount.toString());
+        formData.append('minorsCount', club.minorsCount.toString());
         formData.append('economsCount', club.economsCount.toString());
         formData.append('registrationFee', club.registrationFee.toString());
         formData.append('campId', club.campId.toString());
@@ -71,6 +72,8 @@ let ClubService = class ClubService {
             formData.append('participantsCount', club.participantsCount.toString());
         if (club.guestsCount !== undefined)
             formData.append('guestsCount', club.guestsCount.toString());
+        if (club.minorsCount !== undefined)
+            formData.append('minorsCount', club.minorsCount.toString());
         if (club.economsCount !== undefined)
             formData.append('economsCount', club.economsCount.toString());
         if (club.registrationFee !== undefined)

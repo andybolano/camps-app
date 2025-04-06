@@ -38,6 +38,11 @@ exports.routes = [
         loadComponent: () => Promise.resolve().then(() => require('./pages/club-form/club-form.component')).then((c) => c.ClubFormComponent),
     },
     {
+        path: 'camps/:campId/clubs/:id',
+        canActivate: [auth_guard_1.authGuard],
+        loadComponent: () => Promise.resolve().then(() => require('./pages/club-detail/club-detail.component')).then((c) => c.ClubDetailComponent),
+    },
+    {
         path: 'camps/:campId/events',
         canActivate: [auth_guard_1.authGuard],
         loadComponent: () => Promise.resolve().then(() => require('./pages/events/events.component')).then((c) => c.EventsComponent),

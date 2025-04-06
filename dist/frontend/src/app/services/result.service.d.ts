@@ -16,6 +16,12 @@ export interface Result {
         id: number;
         name: string;
     };
+    event?: {
+        id: number;
+        name: string;
+        date?: string;
+        description?: string;
+    };
 }
 export declare class ResultService {
     private http;
@@ -31,4 +37,5 @@ export declare class ResultService {
     private normalizeResults;
     getResultsByEventWithRanking(eventId: number): Observable<Result[]>;
     getClubRankingByCamp(campId: number): Observable<any[]>;
+    getResultsByClub(clubId: number): Observable<Result[]>;
 }

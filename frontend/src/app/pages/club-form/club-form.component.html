@@ -50,7 +50,7 @@
 
           <div class="mb-3">
             <label for="participantsCount" class="form-label"
-              >Número de Participantes</label
+              >Miembros Bautizados</label
             >
             <input
               type="number"
@@ -68,7 +68,7 @@
               class="text-danger"
             >
               <small *ngIf="participantsCount?.errors?.['required']"
-                >El número de participantes es requerido</small
+                >El número de miembros bautizados es requerido</small
               >
               <small *ngIf="participantsCount?.errors?.['min']"
                 >El número debe ser mayor o igual a 0</small
@@ -77,7 +77,7 @@
           </div>
 
           <div class="mb-3">
-            <label for="guestsCount" class="form-label">Número de Invitados</label>
+            <label for="guestsCount" class="form-label">Número de Miembros no Bautizados</label>
             <input
               type="number"
               class="form-control"
@@ -93,9 +93,34 @@
               class="text-danger"
             >
               <small *ngIf="guestsCount?.errors?.['required']"
-                >El número de invitados es requerido</small
+                >El número de miembros no bautizados es requerido</small
               >
               <small *ngIf="guestsCount?.errors?.['min']"
+                >El número debe ser mayor o igual a 0</small
+              >
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="minorsCount" class="form-label">Número de Menores de Edad</label>
+            <input
+              type="number"
+              class="form-control"
+              id="minorsCount"
+              formControlName="minorsCount"
+              min="0"
+              required
+            />
+            <div
+              *ngIf="
+                minorsCount?.invalid && (minorsCount?.dirty || minorsCount?.touched)
+              "
+              class="text-danger"
+            >
+              <small *ngIf="minorsCount?.errors?.['required']"
+                >El número de menores de edad es requerido</small
+              >
+              <small *ngIf="minorsCount?.errors?.['min']"
                 >El número debe ser mayor o igual a 0</small
               >
             </div>

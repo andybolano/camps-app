@@ -21,6 +21,12 @@ export interface Result {
     id: number;
     name: string;
   };
+  event?: {
+    id: number;
+    name: string;
+    date?: string;
+    description?: string;
+  };
 }
 
 @Injectable({
@@ -92,20 +98,28 @@ export class ResultService {
   private normalizeResult(result: Result): Result {
     console.log('Normalizando resultado del backend:', result);
     if (result) {
+      // Asegurar que eventId esté presente
+      if (!result.eventId && result.event && result.event.id) {
+        console.log(
+          `Asignando eventId (${result.event.id}) desde la propiedad event.id`,
+        );
+        result.eventId = result.event.id;
+      }
+
       if ((result as any).items && !result.scores) {
         console.log('Estructura de items del backend:', (result as any).items);
 
         // Convertir la estructura de items del backend al formato esperado por el frontend
         // y verificar que los items pertenezcan al evento correcto
-        const eventId = result.eventId || ((result as any).event?.id);
-        
+        const eventId = result.eventId || (result as any).event?.id;
+
         result.scores = ((result as any).items || [])
           .filter((item: any) => {
             // Verificar que el eventItem exista y que pertenezca al evento correcto
             const itemEventId = item.eventItem?.event?.id;
             if (itemEventId && eventId && itemEventId !== eventId) {
               console.warn(
-                `[WARNING] Item ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`
+                `[WARNING] Item ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`,
               );
               return false; // Filtrar este item
             }
@@ -120,7 +134,7 @@ export class ResultService {
 
         console.log(
           'Items convertidos a scores (después de filtrar):',
-          result.scores
+          result.scores,
         );
       }
     }
@@ -157,6 +171,19 @@ export class ResultService {
       map((rankingData) => {
         console.log('Ranking general del campamento:', rankingData);
         return rankingData;
+      }),
+    );
+  }
+
+  getResultsByClub(clubId: number): Observable<Result[]> {
+    console.log(`Obteniendo resultados para el club ${clubId}`);
+    return this.http.get<Result[]>(`${this.apiUrl}?clubId=${clubId}`).pipe(
+      map((results) => {
+        console.log(
+          'Resultados sin procesar del backend:',
+          JSON.stringify(results),
+        );
+        return this.normalizeResults(results);
       }),
     );
   }

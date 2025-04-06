@@ -27,6 +27,10 @@ export class CreateClubDto {
 
   @IsNumber()
   @IsPositive()
+  minorsCount: number;
+
+  @IsNumber()
+  @IsPositive()
   economsCount: number;
 
   @IsNumber()

@@ -33,6 +33,7 @@ export declare class ClubFormComponent implements OnInit {
     get city(): import("@angular/forms").AbstractControl<any, any>;
     get participantsCount(): import("@angular/forms").AbstractControl<any, any>;
     get guestsCount(): import("@angular/forms").AbstractControl<any, any>;
+    get minorsCount(): import("@angular/forms").AbstractControl<any, any>;
     get economsCount(): import("@angular/forms").AbstractControl<any, any>;
     get registrationFee(): import("@angular/forms").AbstractControl<any, any>;
     get isPaid(): import("@angular/forms").AbstractControl<any, any>;

@@ -51,6 +51,7 @@ let ClubFormComponent = class ClubFormComponent {
             city: ['', [forms_1.Validators.required]],
             participantsCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
             guestsCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
+            minorsCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
             economsCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
             registrationFee: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
             isPaid: [false],
@@ -76,6 +77,7 @@ let ClubFormComponent = class ClubFormComponent {
                     city: club.city,
                     participantsCount: club.participantsCount,
                     guestsCount: club.guestsCount,
+                    minorsCount: club.minorsCount || 0,
                     economsCount: club.economsCount,
                     registrationFee: club.registrationFee,
                     isPaid: club.isPaid,
@@ -166,6 +168,9 @@ let ClubFormComponent = class ClubFormComponent {
     }
     get guestsCount() {
         return this.clubForm.get('guestsCount');
+    }
+    get minorsCount() {
+        return this.clubForm.get('minorsCount');
     }
     get economsCount() {
         return this.clubForm.get('economsCount');

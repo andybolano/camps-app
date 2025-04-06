@@ -16,3 +16,8 @@
 .table td {
   vertical-align: middle;
 }
+
+// Añadir espacio entre botones del grupo
+.btn-group .btn {
+  margin-right: 3px;
+}

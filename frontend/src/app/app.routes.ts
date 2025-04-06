@@ -52,6 +52,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'camps/:campId/clubs/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/club-detail/club-detail.component').then(
+        (c) => c.ClubDetailComponent,
+      ),
+  },
+  {
     path: 'camps/:campId/events',
     canActivate: [authGuard],
     loadComponent: () =>

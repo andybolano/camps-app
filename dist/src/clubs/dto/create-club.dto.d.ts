@@ -3,6 +3,7 @@ export declare class CreateClubDto {
     city: string;
     participantsCount: number;
     guestsCount: number;
+    minorsCount: number;
     economsCount: number;
     registrationFee: number;
     isPaid?: boolean;

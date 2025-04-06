@@ -30,8 +30,9 @@
           <th>Escudo</th>
           <th>Nombre</th>
           <th>Ciudad</th>
-          <th>Participantes</th>
-          <th>Invitados</th>
+          <th>Miembros Bautizados</th>
+          <th>No Bautizados</th>
+          <th>Menores</th>
           <th>Ecónomas</th>
           <th>Total</th>
           <th>Inscripción</th>
@@ -61,9 +62,10 @@
           <td>{{ club.city }}</td>
           <td>{{ club.participantsCount }}</td>
           <td>{{ club.guestsCount }}</td>
+          <td>{{ club.minorsCount || 0 }}</td>
           <td>{{ club.economsCount }}</td>
           <td>
-            {{ club.participantsCount + club.guestsCount + club.economsCount }}
+            {{ club.participantsCount + club.guestsCount + club.minorsCount + club.economsCount }}
           </td>
           <td>{{ club.registrationFee | currency }}</td>
           <td>
@@ -79,17 +81,25 @@
             <div class="btn-group" role="group">
               <button
                 type="button"
-                class="btn btn-sm btn-outline-primary"
+                class="btn btn-sm btn-primary"
+                [routerLink]="['/camps', campId, 'clubs', club.id]"
+                title="Ver detalles y resultados del club"
+              >
+                <i class="bi bi-eye"></i> Ver Detalles
+              </button>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
                 [routerLink]="['/camps', campId, 'clubs', club.id, 'edit']"
               >
-                Editar
+                <i class="bi bi-pencil"></i> Editar
               </button>
               <button
                 type="button"
                 class="btn btn-sm btn-outline-danger"
                 (click)="onDeleteClub(club.id)"
               >
-                Eliminar
+                <i class="bi bi-trash"></i> Eliminar
               </button>
             </div>
           </td>

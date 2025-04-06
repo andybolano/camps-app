@@ -60,9 +60,13 @@ let ResultService = class ResultService {
     normalizeResult(result) {
         console.log('Normalizando resultado del backend:', result);
         if (result) {
+            if (!result.eventId && result.event && result.event.id) {
+                console.log(`Asignando eventId (${result.event.id}) desde la propiedad event.id`);
+                result.eventId = result.event.id;
+            }
             if (result.items && !result.scores) {
                 console.log('Estructura de items del backend:', result.items);
-                const eventId = result.eventId || (result.event?.id);
+                const eventId = result.eventId || result.event?.id;
                 result.scores = (result.items || [])
                     .filter((item) => {
                     const itemEventId = item.eventItem?.event?.id;
@@ -100,6 +104,13 @@ let ResultService = class ResultService {
         return this.http.get(`${this.apiUrl}/ranking/${campId}`).pipe((0, operators_1.map)((rankingData) => {
             console.log('Ranking general del campamento:', rankingData);
             return rankingData;
+        }));
+    }
+    getResultsByClub(clubId) {
+        console.log(`Obteniendo resultados para el club ${clubId}`);
+        return this.http.get(`${this.apiUrl}?clubId=${clubId}`).pipe((0, operators_1.map)((results) => {
+            console.log('Resultados sin procesar del backend:', JSON.stringify(results));
+            return this.normalizeResults(results);
         }));
     }
 };

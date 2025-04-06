@@ -25,6 +25,9 @@ export class Club {
   @Column()
   guestsCount: number;
 
+  @Column({ default: 0 })
+  minorsCount: number;
+
   @Column()
   economsCount: number;
 
