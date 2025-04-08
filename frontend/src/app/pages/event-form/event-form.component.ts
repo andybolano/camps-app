@@ -155,8 +155,21 @@ export class EventFormComponent implements OnInit {
           this.router.navigate(['/camps', this.campId, 'events']);
         },
         error: (error) => {
-          this.errorMessage = `Error al actualizar el evento: ${error.message}`;
+          // Mostrar el mensaje de error del backend cuando sea posible
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else if (error.error && typeof error.error === 'string') {
+            this.errorMessage = error.error;
+          } else if (error.message) {
+            this.errorMessage = `Error al actualizar el evento: ${error.message}`;
+          } else {
+            this.errorMessage =
+              'Error al actualizar el evento. Contacte al administrador.';
+          }
           this.isLoading = false;
+
+          // Desplazar la página hacia arriba para mostrar el mensaje de error
+          window.scrollTo(0, 0);
         },
       });
     } else {
@@ -165,8 +178,21 @@ export class EventFormComponent implements OnInit {
           this.router.navigate(['/camps', this.campId, 'events']);
         },
         error: (error) => {
-          this.errorMessage = `Error al crear el evento: ${error.message}`;
+          // Mostrar el mensaje de error del backend cuando sea posible
+          if (error.error && error.error.message) {
+            this.errorMessage = error.error.message;
+          } else if (error.error && typeof error.error === 'string') {
+            this.errorMessage = error.error;
+          } else if (error.message) {
+            this.errorMessage = `Error al crear el evento: ${error.message}`;
+          } else {
+            this.errorMessage =
+              'Error al crear el evento. Contacte al administrador.';
+          }
           this.isLoading = false;
+
+          // Desplazar la página hacia arriba para mostrar el mensaje de error
+          window.scrollTo(0, 0);
         },
       });
     }

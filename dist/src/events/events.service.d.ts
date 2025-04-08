@@ -11,6 +11,8 @@ export declare class EventsService {
     private campsService;
     private resultsService;
     constructor(eventsRepository: Repository<Event>, eventItemsRepository: Repository<EventItem>, campsService: CampsService, resultsService: ResultsService);
+    eventHasScores(eventId: number): Promise<boolean>;
+    eventItemHasScores(itemId: number): Promise<boolean>;
     create(createEventDto: CreateEventDto): Promise<Event>;
     findAll(): Promise<Event[]>;
     findByCamp(campId: number): Promise<Event[]>;

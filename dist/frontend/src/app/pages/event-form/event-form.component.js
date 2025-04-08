@@ -120,8 +120,21 @@ let EventFormComponent = class EventFormComponent {
                     this.router.navigate(['/camps', this.campId, 'events']);
                 },
                 error: (error) => {
-                    this.errorMessage = `Error al actualizar el evento: ${error.message}`;
+                    if (error.error && error.error.message) {
+                        this.errorMessage = error.error.message;
+                    }
+                    else if (error.error && typeof error.error === 'string') {
+                        this.errorMessage = error.error;
+                    }
+                    else if (error.message) {
+                        this.errorMessage = `Error al actualizar el evento: ${error.message}`;
+                    }
+                    else {
+                        this.errorMessage =
+                            'Error al actualizar el evento. Contacte al administrador.';
+                    }
                     this.isLoading = false;
+                    window.scrollTo(0, 0);
                 },
             });
         }
@@ -131,8 +144,21 @@ let EventFormComponent = class EventFormComponent {
                     this.router.navigate(['/camps', this.campId, 'events']);
                 },
                 error: (error) => {
-                    this.errorMessage = `Error al crear el evento: ${error.message}`;
+                    if (error.error && error.error.message) {
+                        this.errorMessage = error.error.message;
+                    }
+                    else if (error.error && typeof error.error === 'string') {
+                        this.errorMessage = error.error;
+                    }
+                    else if (error.message) {
+                        this.errorMessage = `Error al crear el evento: ${error.message}`;
+                    }
+                    else {
+                        this.errorMessage =
+                            'Error al crear el evento. Contacte al administrador.';
+                    }
                     this.isLoading = false;
+                    window.scrollTo(0, 0);
                 },
             });
         }

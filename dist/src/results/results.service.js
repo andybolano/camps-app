@@ -262,6 +262,12 @@ let ResultsService = class ResultsService {
             }
         }
     }
+    async hasScoresForEventItem(eventItemId) {
+        const resultItems = await this.resultItemsRepository.find({
+            where: { eventItem: { id: eventItemId } },
+        });
+        return resultItems.length > 0;
+    }
 };
 exports.ResultsService = ResultsService;
 exports.ResultsService = ResultsService = __decorate([

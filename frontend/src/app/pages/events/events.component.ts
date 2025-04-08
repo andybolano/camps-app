@@ -57,14 +57,29 @@ export class EventsComponent implements OnInit {
     }
 
     this.isLoading = true;
+    this.errorMessage = '';
+
     this.eventService.deleteEvent(id).subscribe({
       next: () => {
         this.events = this.events.filter((event) => event.id !== id);
         this.isLoading = false;
       },
       error: (error) => {
-        this.errorMessage = 'Error al eliminar el evento: ' + error.message;
+        // Mostrar el mensaje de error del backend cuando sea posible
+        if (error.error && error.error.message) {
+          this.errorMessage = error.error.message;
+        } else if (error.error && typeof error.error === 'string') {
+          this.errorMessage = error.error;
+        } else if (error.message) {
+          this.errorMessage = 'Error al eliminar el evento: ' + error.message;
+        } else {
+          this.errorMessage =
+            'Error al eliminar el evento. Contacte al administrador.';
+        }
         this.isLoading = false;
+
+        // Desplazar la página hacia arriba para mostrar el mensaje de error
+        window.scrollTo(0, 0);
       },
     });
   }

@@ -27,6 +27,19 @@ let EventsService = class EventsService {
         this.campsService = campsService;
         this.resultsService = resultsService;
     }
+    async eventHasScores(eventId) {
+        const results = await this.resultsService.findByEvent(eventId);
+        return results.length > 0;
+    }
+    async eventItemHasScores(itemId) {
+        try {
+            return await this.resultsService.hasScoresForEventItem(itemId);
+        }
+        catch (error) {
+            console.error(`Error al verificar scores para el item ${itemId}:`, error);
+            return false;
+        }
+    }
     async create(createEventDto) {
         const { campId, items, ...eventData } = createEventDto;
         const camp = await this.campsService.findOne(campId);
@@ -65,6 +78,7 @@ let EventsService = class EventsService {
     }
     async update(id, updateEventDto) {
         const event = await this.findOne(id);
+        const hasScores = await this.eventHasScores(id);
         if (updateEventDto.items) {
             const existingItems = await this.eventItemsRepository.find({
                 where: { event: { id } },
@@ -82,25 +96,43 @@ let EventsService = class EventsService {
             const itemsToCreate = updateEventDto.items.filter((item) => !item.id ||
                 !existingItems.some((existing) => existing.id === item.id));
             try {
-                if (itemsToDelete.length > 0) {
-                    console.log(`Attempting to delete ${itemsToDelete.length} items that are no longer needed`);
-                    const idsToDelete = itemsToDelete.map((item) => item.id);
-                    console.log(`Items to delete: ${idsToDelete.join(', ')}`);
-                    for (const item of itemsToDelete) {
+                if (hasScores) {
+                    if (itemsToDelete.length > 0) {
+                        throw new common_1.BadRequestException('No se pueden actualizar los ítems de calificación porque este evento ya tiene calificaciones registradas.');
+                    }
+                    for (const item of itemsToUpdate) {
+                        const updateData = updatedItemsMap.get(item.id);
+                        const itemHasScores = await this.eventItemHasScores(item.id);
+                        if (itemHasScores) {
+                            if ((updateData.name && updateData.name !== item.name) ||
+                                (updateData.percentage !== undefined &&
+                                    updateData.percentage !== item.percentage)) {
+                                throw new common_1.BadRequestException(`No se puede modificar el ítem "${item.name}" porque ya tiene calificaciones asociadas.`);
+                            }
+                        }
+                    }
+                }
+                else {
+                    if (itemsToDelete.length > 0) {
+                        console.log(`Attempting to delete ${itemsToDelete.length} items that are no longer needed`);
+                        const idsToDelete = itemsToDelete.map((item) => item.id);
+                        console.log(`Items to delete: ${idsToDelete.join(', ')}`);
+                        for (const item of itemsToDelete) {
+                            try {
+                                await this.resultsService.deleteResultItemsByEventItem(item.id);
+                                console.log(`ResultItems del item ${item.id} eliminados correctamente`);
+                            }
+                            catch (error) {
+                                console.error(`Error al eliminar ResultItems del item ${item.id}: ${error.message}`);
+                            }
+                        }
                         try {
-                            await this.resultsService.deleteResultItemsByEventItem(item.id);
-                            console.log(`ResultItems del item ${item.id} eliminados correctamente`);
+                            const deleteResult = await this.eventItemsRepository.delete(idsToDelete);
+                            console.log(`Successfully deleted ${deleteResult.affected} event items`);
                         }
                         catch (error) {
-                            console.error(`Error al eliminar ResultItems del item ${item.id}: ${error.message}`);
+                            console.error(`Error al eliminar EventItems: ${error.message}`);
                         }
-                    }
-                    try {
-                        const deleteResult = await this.eventItemsRepository.delete(idsToDelete);
-                        console.log(`Successfully deleted ${deleteResult.affected} event items`);
-                    }
-                    catch (error) {
-                        console.error(`Error al eliminar EventItems: ${error.message}`);
                     }
                 }
                 for (const item of itemsToUpdate) {
@@ -133,20 +165,37 @@ let EventsService = class EventsService {
                 }
             }
             catch (error) {
+                if (error instanceof common_1.BadRequestException) {
+                    throw error;
+                }
                 throw new Error(`Failed to update event items: ${error.message}`);
             }
         }
-        if (updateEventDto.campId) {
-            const camp = await this.campsService.findOne(updateEventDto.campId);
-            event.camp = camp;
+        if (hasScores) {
+            if ((updateEventDto.name && updateEventDto.name !== event.name) ||
+                (updateEventDto.description &&
+                    updateEventDto.description !== event.description) ||
+                updateEventDto.campId) {
+                throw new common_1.BadRequestException('No se pueden modificar los datos básicos del evento porque ya tiene calificaciones registradas.');
+            }
         }
-        const eventData = { ...updateEventDto };
-        delete eventData.campId;
-        delete eventData.items;
-        Object.assign(event, eventData);
+        else {
+            if (updateEventDto.campId) {
+                const camp = await this.campsService.findOne(updateEventDto.campId);
+                event.camp = camp;
+            }
+            const eventData = { ...updateEventDto };
+            delete eventData.campId;
+            delete eventData.items;
+            Object.assign(event, eventData);
+        }
         return this.eventsRepository.save(event);
     }
     async remove(id) {
+        const hasScores = await this.eventHasScores(id);
+        if (hasScores) {
+            throw new common_1.BadRequestException('No se puede eliminar el evento porque ya tiene calificaciones registradas.');
+        }
         const result = await this.eventsRepository.delete(id);
         if (result.affected === 0) {
             throw new common_1.NotFoundException(`Event with ID ${id} not found`);

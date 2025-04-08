@@ -3,6 +3,7 @@ import {
   NotFoundException,
   Inject,
   forwardRef,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,6 +25,23 @@ export class EventsService {
     @Inject(forwardRef(() => ResultsService))
     private resultsService: ResultsService,
   ) {}
+
+  // Método para verificar si un evento tiene calificaciones
+  async eventHasScores(eventId: number): Promise<boolean> {
+    const results = await this.resultsService.findByEvent(eventId);
+    return results.length > 0;
+  }
+
+  // Método para verificar si un ítem de evento tiene calificaciones
+  async eventItemHasScores(itemId: number): Promise<boolean> {
+    try {
+      // Usar el servicio de resultados para verificar si hay calificaciones para este ítem
+      return await this.resultsService.hasScoresForEventItem(itemId);
+    } catch (error) {
+      console.error(`Error al verificar scores para el item ${itemId}:`, error);
+      return false; // En caso de error, asumimos que no hay calificaciones
+    }
+  }
 
   async create(createEventDto: CreateEventDto): Promise<Event> {
     const { campId, items, ...eventData } = createEventDto;
@@ -82,6 +100,9 @@ export class EventsService {
   async update(id: number, updateEventDto: UpdateEventDto): Promise<Event> {
     const event = await this.findOne(id);
 
+    // Verificar si el evento tiene calificaciones
+    const hasScores = await this.eventHasScores(id);
+
     // Handle items update if provided
     if (updateEventDto.items) {
       // Instead of deleting all items, find which ones we need to keep
@@ -122,41 +143,71 @@ export class EventsService {
       );
 
       try {
-        // For items to delete, we need to check if they're referenced in results
-        // Primero eliminamos las calificaciones asociadas a los items que se eliminarán
-        if (itemsToDelete.length > 0) {
-          console.log(
-            `Attempting to delete ${itemsToDelete.length} items that are no longer needed`,
-          );
+        // Si el evento tiene calificaciones, verificar cada ítem
+        if (hasScores) {
+          // No se pueden eliminar ítems si el evento ya tiene calificaciones
+          if (itemsToDelete.length > 0) {
+            throw new BadRequestException(
+              'No se pueden actualizar los ítems de calificación porque este evento ya tiene calificaciones registradas.',
+            );
+          }
 
-          // Obtener los IDs de los items a eliminar
-          const idsToDelete = itemsToDelete.map((item) => item.id);
-          console.log(`Items to delete: ${idsToDelete.join(', ')}`);
+          // Verificar si se intentan modificar ítems
+          for (const item of itemsToUpdate) {
+            const updateData = updatedItemsMap.get(item.id);
+            const itemHasScores = await this.eventItemHasScores(item.id);
 
-          // Primero eliminamos todas las calificaciones (ResultItems) asociadas a estos EventItems
-          for (const item of itemsToDelete) {
-            try {
-              // Eliminar ResultItems asociados a este EventItem
-              await this.resultsService.deleteResultItemsByEventItem(item.id);
-              console.log(
-                `ResultItems del item ${item.id} eliminados correctamente`,
-              );
-            } catch (error) {
-              console.error(
-                `Error al eliminar ResultItems del item ${item.id}: ${error.message}`,
-              );
+            if (itemHasScores) {
+              // Verificar si se está intentando cambiar el porcentaje o nombre
+              if (
+                (updateData.name && updateData.name !== item.name) ||
+                (updateData.percentage !== undefined &&
+                  updateData.percentage !== item.percentage)
+              ) {
+                throw new BadRequestException(
+                  `No se puede modificar el ítem "${item.name}" porque ya tiene calificaciones asociadas.`,
+                );
+              }
             }
           }
 
-          // Ahora podemos eliminar los EventItems sin problemas de restricciones foreign key
-          try {
-            const deleteResult =
-              await this.eventItemsRepository.delete(idsToDelete);
+          // Se pueden agregar nuevos ítems aunque haya calificaciones
+        } else {
+          // Si no hay calificaciones, proceder normalmente con eliminaciones
+          if (itemsToDelete.length > 0) {
             console.log(
-              `Successfully deleted ${deleteResult.affected} event items`,
+              `Attempting to delete ${itemsToDelete.length} items that are no longer needed`,
             );
-          } catch (error) {
-            console.error(`Error al eliminar EventItems: ${error.message}`);
+
+            // Obtener los IDs de los items a eliminar
+            const idsToDelete = itemsToDelete.map((item) => item.id);
+            console.log(`Items to delete: ${idsToDelete.join(', ')}`);
+
+            // Primero eliminamos todas las calificaciones (ResultItems) asociadas a estos EventItems
+            for (const item of itemsToDelete) {
+              try {
+                // Eliminar ResultItems asociados a este EventItem
+                await this.resultsService.deleteResultItemsByEventItem(item.id);
+                console.log(
+                  `ResultItems del item ${item.id} eliminados correctamente`,
+                );
+              } catch (error) {
+                console.error(
+                  `Error al eliminar ResultItems del item ${item.id}: ${error.message}`,
+                );
+              }
+            }
+
+            // Ahora podemos eliminar los EventItems sin problemas de restricciones foreign key
+            try {
+              const deleteResult =
+                await this.eventItemsRepository.delete(idsToDelete);
+              console.log(
+                `Successfully deleted ${deleteResult.affected} event items`,
+              );
+            } catch (error) {
+              console.error(`Error al eliminar EventItems: ${error.message}`);
+            }
           }
         }
 
@@ -202,26 +253,53 @@ export class EventsService {
           event.items = [...itemsToUpdate];
         }
       } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error; // Re-lanzar errores de validación
+        }
         throw new Error(`Failed to update event items: ${error.message}`);
       }
     }
 
-    // Handle camp update if campId is provided
-    if (updateEventDto.campId) {
-      const camp = await this.campsService.findOne(updateEventDto.campId);
-      event.camp = camp;
-    }
+    // Si tiene calificaciones y se intenta cambiar datos básicos del evento
+    if (hasScores) {
+      // Solo permitir que se actualicen items, pero no otros campos
+      if (
+        (updateEventDto.name && updateEventDto.name !== event.name) ||
+        (updateEventDto.description &&
+          updateEventDto.description !== event.description) ||
+        updateEventDto.campId
+      ) {
+        throw new BadRequestException(
+          'No se pueden modificar los datos básicos del evento porque ya tiene calificaciones registradas.',
+        );
+      }
+    } else {
+      // Si no hay calificaciones, permitir actualizar todos los campos
+      // Handle camp update if campId is provided
+      if (updateEventDto.campId) {
+        const camp = await this.campsService.findOne(updateEventDto.campId);
+        event.camp = camp;
+      }
 
-    // Update basic event properties
-    const eventData = { ...updateEventDto };
-    delete eventData.campId;
-    delete eventData.items;
-    Object.assign(event, eventData);
+      // Update basic event properties
+      const eventData = { ...updateEventDto };
+      delete eventData.campId;
+      delete eventData.items;
+      Object.assign(event, eventData);
+    }
 
     return this.eventsRepository.save(event);
   }
 
   async remove(id: number): Promise<void> {
+    // Verificar si el evento tiene calificaciones
+    const hasScores = await this.eventHasScores(id);
+    if (hasScores) {
+      throw new BadRequestException(
+        'No se puede eliminar el evento porque ya tiene calificaciones registradas.',
+      );
+    }
+
     const result = await this.eventsRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Event with ID ${id} not found`);

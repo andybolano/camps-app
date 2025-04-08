@@ -22,4 +22,5 @@ export declare class ResultsService {
     update(id: number, updateResultDto: UpdateResultDto): Promise<Result>;
     remove(id: number): Promise<void>;
     deleteResultItemsByEventItem(eventItemId: number): Promise<void>;
+    hasScoresForEventItem(eventItemId: number): Promise<boolean>;
 }

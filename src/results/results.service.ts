@@ -419,4 +419,13 @@ export class ResultsService {
       }
     }
   }
+
+  // Nuevo método para verificar si un ítem de evento tiene calificaciones
+  async hasScoresForEventItem(eventItemId: number): Promise<boolean> {
+    const resultItems = await this.resultItemsRepository.find({
+      where: { eventItem: { id: eventItemId } },
+    });
+
+    return resultItems.length > 0;
+  }
 }
