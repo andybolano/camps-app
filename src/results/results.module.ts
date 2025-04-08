@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ResultsService } from './results.service';
 import { ResultsController } from './results.controller';
@@ -11,7 +11,7 @@ import { EventsModule } from '../events/events.module';
   imports: [
     TypeOrmModule.forFeature([Result, ResultItem]),
     ClubsModule,
-    EventsModule,
+    forwardRef(() => EventsModule),
   ],
   controllers: [ResultsController],
   providers: [ResultsService],

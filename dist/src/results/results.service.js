@@ -227,12 +227,48 @@ let ResultsService = class ResultsService {
             throw new common_1.NotFoundException(`Result with ID ${id} not found`);
         }
     }
+    async deleteResultItemsByEventItem(eventItemId) {
+        console.log(`Eliminando ResultItems asociados al EventItem con ID ${eventItemId}`);
+        const resultItems = await this.resultItemsRepository.find({
+            where: { eventItem: { id: eventItemId } },
+            relations: ['result'],
+        });
+        console.log(`Se encontraron ${resultItems.length} ResultItems asociados al EventItem ${eventItemId}`);
+        if (resultItems.length === 0) {
+            return;
+        }
+        const resultIds = new Set();
+        resultItems.forEach((item) => {
+            if (item.result && item.result.id) {
+                resultIds.add(item.result.id);
+            }
+        });
+        await this.resultItemsRepository.delete({ eventItem: { id: eventItemId } });
+        for (const resultId of resultIds) {
+            try {
+                const result = await this.findOne(resultId);
+                let totalScore = 0;
+                for (const item of result.items) {
+                    if (item.eventItem && item.eventItem.percentage) {
+                        totalScore += (item.score * item.eventItem.percentage) / 100;
+                    }
+                }
+                result.totalScore = parseFloat(totalScore.toFixed(2));
+                await this.resultsRepository.save(result);
+                console.log(`Actualizado el total para Result ${resultId}: ${result.totalScore}`);
+            }
+            catch (error) {
+                console.error(`Error al actualizar Result ${resultId}: ${error.message}`);
+            }
+        }
+    }
 };
 exports.ResultsService = ResultsService;
 exports.ResultsService = ResultsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(result_entity_1.Result)),
     __param(1, (0, typeorm_1.InjectRepository)(result_item_entity_1.ResultItem)),
+    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => events_service_1.EventsService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         clubs_service_1.ClubsService,

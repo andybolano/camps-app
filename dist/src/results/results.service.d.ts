@@ -21,4 +21,5 @@ export declare class ResultsService {
     getClubRankingByCamp(campId: number): Promise<any[]>;
     update(id: number, updateResultDto: UpdateResultDto): Promise<Result>;
     remove(id: number): Promise<void>;
+    deleteResultItemsByEventItem(eventItemId: number): Promise<void>;
 }

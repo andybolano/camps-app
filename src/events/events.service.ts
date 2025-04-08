@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
@@ -6,6 +11,7 @@ import { EventItem } from './entities/event-item.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CampsService } from '../camps/camps.service';
+import { ResultsService } from '../results/results.service';
 
 @Injectable()
 export class EventsService {
@@ -15,6 +21,8 @@ export class EventsService {
     @InjectRepository(EventItem)
     private eventItemsRepository: Repository<EventItem>,
     private campsService: CampsService,
+    @Inject(forwardRef(() => ResultsService))
+    private resultsService: ResultsService,
   ) {}
 
   async create(createEventDto: CreateEventDto): Promise<Event> {
@@ -76,18 +84,126 @@ export class EventsService {
 
     // Handle items update if provided
     if (updateEventDto.items) {
-      // Delete existing items
-      await this.eventItemsRepository.delete({ event: { id } });
+      // Instead of deleting all items, find which ones we need to keep
+      // Get existing event items with their IDs and verify they're properly loaded
+      const existingItems = await this.eventItemsRepository.find({
+        where: { event: { id } },
+        relations: ['event'],
+      });
 
-      // Create new items
-      const eventItems = updateEventDto.items.map((item) =>
-        this.eventItemsRepository.create({
-          ...item,
-          event,
-        }),
+      // Log found items for debugging
+      console.log(
+        `Found ${existingItems.length} existing items for event ${id}`,
       );
 
-      event.items = await this.eventItemsRepository.save(eventItems);
+      // Create a map of items from the DTO with their IDs (if they have one)
+      const updatedItemsMap = new Map();
+      updateEventDto.items.forEach((item) => {
+        if (item.id) {
+          updatedItemsMap.set(item.id, item);
+        }
+      });
+
+      // Items to delete (existing items not in the update)
+      const itemsToDelete = existingItems.filter(
+        (item) => !updatedItemsMap.has(item.id),
+      );
+
+      // Items to update (existing items also in the update)
+      const itemsToUpdate = existingItems.filter((item) =>
+        updatedItemsMap.has(item.id),
+      );
+
+      // Items to create (items in update without IDs or with IDs not in existing items)
+      const itemsToCreate = updateEventDto.items.filter(
+        (item) =>
+          !item.id ||
+          !existingItems.some((existing) => existing.id === item.id),
+      );
+
+      try {
+        // For items to delete, we need to check if they're referenced in results
+        // Primero eliminamos las calificaciones asociadas a los items que se eliminarán
+        if (itemsToDelete.length > 0) {
+          console.log(
+            `Attempting to delete ${itemsToDelete.length} items that are no longer needed`,
+          );
+
+          // Obtener los IDs de los items a eliminar
+          const idsToDelete = itemsToDelete.map((item) => item.id);
+          console.log(`Items to delete: ${idsToDelete.join(', ')}`);
+
+          // Primero eliminamos todas las calificaciones (ResultItems) asociadas a estos EventItems
+          for (const item of itemsToDelete) {
+            try {
+              // Eliminar ResultItems asociados a este EventItem
+              await this.resultsService.deleteResultItemsByEventItem(item.id);
+              console.log(
+                `ResultItems del item ${item.id} eliminados correctamente`,
+              );
+            } catch (error) {
+              console.error(
+                `Error al eliminar ResultItems del item ${item.id}: ${error.message}`,
+              );
+            }
+          }
+
+          // Ahora podemos eliminar los EventItems sin problemas de restricciones foreign key
+          try {
+            const deleteResult =
+              await this.eventItemsRepository.delete(idsToDelete);
+            console.log(
+              `Successfully deleted ${deleteResult.affected} event items`,
+            );
+          } catch (error) {
+            console.error(`Error al eliminar EventItems: ${error.message}`);
+          }
+        }
+
+        // Update existing items
+        for (const item of itemsToUpdate) {
+          const updateData = updatedItemsMap.get(item.id);
+          if (updateData) {
+            // Para evitar duplicados durante la actualización, solo copiamos propiedades específicas
+            if (updateData.name) item.name = updateData.name;
+            if (updateData.percentage !== undefined)
+              item.percentage = updateData.percentage;
+            // Añade aquí otras propiedades que puedan necesitar actualizarse
+          }
+        }
+
+        if (itemsToUpdate.length > 0) {
+          await this.eventItemsRepository.save(itemsToUpdate);
+        }
+
+        // Create new items
+        if (itemsToCreate.length > 0) {
+          const newItems = itemsToCreate.map((item) =>
+            this.eventItemsRepository.create({
+              ...item,
+              event,
+            }),
+          );
+
+          const savedNewItems = await this.eventItemsRepository.save(newItems);
+
+          // Update the event's items array - ensure no duplicates by combining unique items
+          const allEventItems = [...itemsToUpdate, ...savedNewItems];
+
+          // We'll use a Map to deduplicate items by ID
+          const uniqueItemsMap = new Map();
+          for (const item of allEventItems) {
+            uniqueItemsMap.set(item.id, item);
+          }
+
+          // Convert the map values back to an array
+          event.items = Array.from(uniqueItemsMap.values());
+        } else {
+          event.items = [...itemsToUpdate];
+        }
+      } catch (error) {
+        throw new Error(`Failed to update event items: ${error.message}`);
+      }
     }
 
     // Handle camp update if campId is provided
@@ -97,7 +213,9 @@ export class EventsService {
     }
 
     // Update basic event properties
-    const { ...eventData } = updateEventDto;
+    const eventData = { ...updateEventDto };
+    delete eventData.campId;
+    delete eventData.items;
     Object.assign(event, eventData);
 
     return this.eventsRepository.save(event);

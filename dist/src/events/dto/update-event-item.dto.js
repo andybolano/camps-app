@@ -9,33 +9,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateEventDto = void 0;
-const class_transformer_1 = require("class-transformer");
+exports.UpdateEventItemDto = void 0;
 const class_validator_1 = require("class-validator");
-const update_event_item_dto_1 = require("./update-event-item.dto");
-class UpdateEventDto {
+const mapped_types_1 = require("@nestjs/mapped-types");
+const create_event_item_dto_1 = require("./create-event-item.dto");
+class UpdateEventItemDto extends (0, mapped_types_1.PartialType)(create_event_item_dto_1.CreateEventItemDto) {
 }
-exports.UpdateEventDto = UpdateEventDto;
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], UpdateEventDto.prototype, "name", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], UpdateEventDto.prototype, "description", void 0);
+exports.UpdateEventItemDto = UpdateEventItemDto;
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
-], UpdateEventDto.prototype, "campId", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.ValidateNested)({ each: true }),
-    (0, class_transformer_1.Type)(() => update_event_item_dto_1.UpdateEventItemDto),
-    __metadata("design:type", Array)
-], UpdateEventDto.prototype, "items", void 0);
-//# sourceMappingURL=update-event.dto.js.map
+], UpdateEventItemDto.prototype, "id", void 0);
+//# sourceMappingURL=update-event-item.dto.js.map

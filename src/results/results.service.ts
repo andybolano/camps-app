@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,6 +22,7 @@ export class ResultsService {
     @InjectRepository(ResultItem)
     private resultItemsRepository: Repository<ResultItem>,
     private clubsService: ClubsService,
+    @Inject(forwardRef(() => EventsService))
     private eventsService: EventsService,
   ) {}
 
@@ -351,6 +354,69 @@ export class ResultsService {
     const result = await this.resultsRepository.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Result with ID ${id} not found`);
+    }
+  }
+
+  /**
+   * Elimina todos los ResultItems asociados a un EventItem específico
+   * @param eventItemId ID del EventItem cuyos ResultItems se eliminarán
+   */
+  async deleteResultItemsByEventItem(eventItemId: number): Promise<void> {
+    console.log(
+      `Eliminando ResultItems asociados al EventItem con ID ${eventItemId}`,
+    );
+
+    // Buscar primero los ResultItems que tienen referencia al EventItem
+    const resultItems = await this.resultItemsRepository.find({
+      where: { eventItem: { id: eventItemId } },
+      relations: ['result'],
+    });
+
+    console.log(
+      `Se encontraron ${resultItems.length} ResultItems asociados al EventItem ${eventItemId}`,
+    );
+
+    if (resultItems.length === 0) {
+      return;
+    }
+
+    // Agrupar los ResultItems por Result para actualizar los totales
+    const resultIds = new Set<number>();
+    resultItems.forEach((item) => {
+      if (item.result && item.result.id) {
+        resultIds.add(item.result.id);
+      }
+    });
+
+    // Eliminar los ResultItems
+    await this.resultItemsRepository.delete({ eventItem: { id: eventItemId } });
+
+    // Actualizar los totales de cada Result afectado
+    for (const resultId of resultIds) {
+      try {
+        const result = await this.findOne(resultId);
+
+        // Recalcular el total
+        let totalScore = 0;
+        for (const item of result.items) {
+          // Asegurarse de que este cálculo corresponde con tu lógica de negocio
+          if (item.eventItem && item.eventItem.percentage) {
+            totalScore += (item.score * item.eventItem.percentage) / 100;
+          }
+        }
+
+        // Actualizar el total
+        result.totalScore = parseFloat(totalScore.toFixed(2));
+        await this.resultsRepository.save(result);
+
+        console.log(
+          `Actualizado el total para Result ${resultId}: ${result.totalScore}`,
+        );
+      } catch (error) {
+        console.error(
+          `Error al actualizar Result ${resultId}: ${error.message}`,
+        );
+      }
     }
   }
 }

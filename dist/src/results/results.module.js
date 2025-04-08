@@ -23,7 +23,7 @@ exports.ResultsModule = ResultsModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([result_entity_1.Result, result_item_entity_1.ResultItem]),
             clubs_module_1.ClubsModule,
-            events_module_1.EventsModule,
+            (0, common_1.forwardRef)(() => events_module_1.EventsModule),
         ],
         controllers: [results_controller_1.ResultsController],
         providers: [results_service_1.ResultsService],
