@@ -267,21 +267,6 @@
                   </div>
                 </div>
 
-                <div class="col-md-6 mt-2">
-                  <label [for]="'mbItemCalc' + i" class="form-label"
-                    >Tipo de Cálculo*</label
-                  >
-                  <select
-                    class="form-select"
-                    [id]="'mbItemCalc' + i"
-                    formControlName="calculationType"
-                  >
-                    <option *ngFor="let calc of calculationTypes" [value]="calc.value">
-                      {{ calc.label }}
-                    </option>
-                  </select>
-                </div>
-
                 <div class="col-md-4 mt-2">
                   <div class="form-check">
                     <input

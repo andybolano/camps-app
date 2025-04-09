@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventFormComponent = void 0;
 const core_1 = require("@angular/core");
@@ -287,10 +288,6 @@ exports.EventFormComponent = EventFormComponent = __decorate([
         templateUrl: './event-form.component.html',
         styleUrl: './event-form.component.scss',
     }),
-    __metadata("design:paramtypes", [forms_1.FormBuilder,
-        event_service_1.EventService,
-        camp_service_1.CampService,
-        router_1.ActivatedRoute,
-        router_1.Router])
+    __metadata("design:paramtypes", [typeof (_a = typeof forms_1.FormBuilder !== "undefined" && forms_1.FormBuilder) === "function" ? _a : Object, typeof (_b = typeof event_service_1.EventService !== "undefined" && event_service_1.EventService) === "function" ? _b : Object, typeof (_c = typeof camp_service_1.CampService !== "undefined" && camp_service_1.CampService) === "function" ? _c : Object, typeof (_d = typeof router_1.ActivatedRoute !== "undefined" && router_1.ActivatedRoute) === "function" ? _d : Object, typeof (_e = typeof router_1.Router !== "undefined" && router_1.Router) === "function" ? _e : Object])
 ], EventFormComponent);
-//# sourceMappingURL=event-form.component.js.map
+//# sourceMappingURL=tmp.js.map
