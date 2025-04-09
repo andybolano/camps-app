@@ -166,69 +166,165 @@ export class ClubDetailComponent implements OnInit {
     console.log('Procesando items. Resultado:', result);
     console.log('Evento obtenido para procesar items:', event);
 
-    // Si el evento no tiene items, mostramos un mensaje en la consola
-    if (!event.items || !Array.isArray(event.items)) {
+    // Si el evento no tiene items ni memberBasedItems, mostramos un mensaje en la consola
+    if (
+      (!event.items || !Array.isArray(event.items)) &&
+      (!event.memberBasedItems || !Array.isArray(event.memberBasedItems))
+    ) {
       console.warn(
-        'El evento no tiene items definidos o no son un array:',
+        'El evento no tiene items ni memberBasedItems definidos o no son arrays:',
         event,
       );
       this.resultDetail.items = [];
       return;
     }
 
-    console.log('Items del evento:', event.items);
+    // Dependiendo del tipo de evento, usamos los items apropiados
+    if (
+      event.type === 'MEMBER_BASED' &&
+      event.memberBasedItems &&
+      Array.isArray(event.memberBasedItems)
+    ) {
+      console.log(
+        'Evento de tipo MEMBER_BASED. Procesando memberBasedItems:',
+        event.memberBasedItems,
+      );
 
-    // Extraer los scores del resultado
-    let resultItems: any[] = [];
+      // Extraer los scores del resultado para eventos basados en miembros
+      let memberBasedResultItems: any[] = [];
 
-    // Primera fuente: propiedad items en formato anidado
-    if (result.items && Array.isArray(result.items)) {
-      console.log('Usando items del resultado:', result.items);
-      resultItems = result.items;
-    }
-    // Segunda fuente: propiedad scores para resultados normalizados
-    else if (result.scores && Array.isArray(result.scores)) {
-      console.log('Usando scores del resultado:', result.scores);
-      resultItems = result.scores;
-    }
-
-    // Para detectar el caso especial de items con estructura completa
-    const hasNestedEventItem =
-      resultItems.length > 0 &&
-      typeof resultItems[0] === 'object' &&
-      'eventItem' in resultItems[0];
-
-    console.log('Items tienen estructura anidada:', hasNestedEventItem);
-
-    // Mapear los items del evento
-    this.resultDetail.items = event.items.map((eventItem: any) => {
-      let score = 0;
-
-      // Buscar la puntuación correspondiente
-      if (hasNestedEventItem) {
-        // Formato anidado: item.eventItem.id
-        const matchingItem = resultItems.find(
-          (item) => item.eventItem && item.eventItem.id === eventItem.id,
+      // Primera fuente: propiedad memberBasedItems en formato anidado
+      if (result.memberBasedItems && Array.isArray(result.memberBasedItems)) {
+        console.log(
+          'Usando memberBasedItems del resultado:',
+          result.memberBasedItems,
         );
-        if (matchingItem) score = matchingItem.score || 0;
-      } else {
-        // Formato plano: item.eventItemId
-        const matchingItem = resultItems.find(
-          (item) => item.eventItemId === eventItem.id,
+        memberBasedResultItems = result.memberBasedItems;
+      }
+      // Segunda fuente: propiedad memberBasedScores para resultados normalizados
+      else if (
+        result.memberBasedScores &&
+        Array.isArray(result.memberBasedScores)
+      ) {
+        console.log(
+          'Usando memberBasedScores del resultado:',
+          result.memberBasedScores,
         );
-        if (matchingItem) score = matchingItem.score || 0;
+        memberBasedResultItems = result.memberBasedScores;
       }
 
-      const percentage = eventItem.percentage || 0;
-      const weightedScore = (score * percentage) / 100;
+      // Para detectar el caso especial de items con estructura completa
+      const hasNestedEventItem =
+        memberBasedResultItems.length > 0 &&
+        typeof memberBasedResultItems[0] === 'object' &&
+        'eventItem' in memberBasedResultItems[0];
 
-      return {
-        name: eventItem.name || `Ítem ${eventItem.id}`,
-        percentage: percentage,
-        score: score,
-        weightedScore: weightedScore,
-      };
-    });
+      console.log(
+        'MemberBasedItems tienen estructura anidada:',
+        hasNestedEventItem,
+      );
+
+      // Mapear los items del evento basado en miembros
+      this.resultDetail.items = event.memberBasedItems.map((eventItem: any) => {
+        let score = 0;
+        let matchCount = 0;
+        let totalWithCharacteristic = 0;
+
+        // Buscar la puntuación correspondiente
+        if (hasNestedEventItem) {
+          // Formato anidado: item.eventItem.id
+          const matchingItem = memberBasedResultItems.find(
+            (item) => item.eventItem && item.eventItem.id === eventItem.id,
+          );
+          if (matchingItem) {
+            score = matchingItem.score || 0;
+            matchCount = matchingItem.matchCount || 0;
+            totalWithCharacteristic = matchingItem.totalWithCharacteristic || 0;
+          }
+        } else {
+          // Formato plano: item.eventItemId
+          const matchingItem = memberBasedResultItems.find(
+            (item) => item.eventItemId === eventItem.id,
+          );
+          if (matchingItem) {
+            score = matchingItem.score || 0;
+            matchCount = matchingItem.matchCount || 0;
+            totalWithCharacteristic = matchingItem.totalWithCharacteristic || 0;
+          }
+        }
+
+        const percentage = eventItem.percentage || 0;
+        const weightedScore = (score * percentage) / 100;
+
+        // Añadir información adicional para eventos MEMBER_BASED en nombre del item
+        const matchInfo =
+          totalWithCharacteristic > 0
+            ? ` (${matchCount}/${totalWithCharacteristic})`
+            : '';
+
+        return {
+          name: (eventItem.name || `Ítem ${eventItem.id}`) + matchInfo,
+          percentage: percentage,
+          score: score,
+          weightedScore: weightedScore,
+        };
+      });
+    } else {
+      // Código existente para eventos REGULAR
+      console.log('Items del evento:', event.items);
+
+      // Extraer los scores del resultado
+      let resultItems: any[] = [];
+
+      // Primera fuente: propiedad items en formato anidado
+      if (result.items && Array.isArray(result.items)) {
+        console.log('Usando items del resultado:', result.items);
+        resultItems = result.items;
+      }
+      // Segunda fuente: propiedad scores para resultados normalizados
+      else if (result.scores && Array.isArray(result.scores)) {
+        console.log('Usando scores del resultado:', result.scores);
+        resultItems = result.scores;
+      }
+
+      // Para detectar el caso especial de items con estructura completa
+      const hasNestedEventItem =
+        resultItems.length > 0 &&
+        typeof resultItems[0] === 'object' &&
+        'eventItem' in resultItems[0];
+
+      console.log('Items tienen estructura anidada:', hasNestedEventItem);
+
+      // Mapear los items del evento
+      this.resultDetail.items = event.items.map((eventItem: any) => {
+        let score = 0;
+
+        // Buscar la puntuación correspondiente
+        if (hasNestedEventItem) {
+          // Formato anidado: item.eventItem.id
+          const matchingItem = resultItems.find(
+            (item) => item.eventItem && item.eventItem.id === eventItem.id,
+          );
+          if (matchingItem) score = matchingItem.score || 0;
+        } else {
+          // Formato plano: item.eventItemId
+          const matchingItem = resultItems.find(
+            (item) => item.eventItemId === eventItem.id,
+          );
+          if (matchingItem) score = matchingItem.score || 0;
+        }
+
+        const percentage = eventItem.percentage || 0;
+        const weightedScore = (score * percentage) / 100;
+
+        return {
+          name: eventItem.name || `Ítem ${eventItem.id}`,
+          percentage: percentage,
+          score: score,
+          weightedScore: weightedScore,
+        };
+      });
+    }
 
     console.log('Items procesados para el modal:', this.resultDetail.items);
   }

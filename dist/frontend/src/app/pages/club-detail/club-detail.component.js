@@ -121,46 +121,100 @@ let ClubDetailComponent = class ClubDetailComponent {
             return;
         console.log('Procesando items. Resultado:', result);
         console.log('Evento obtenido para procesar items:', event);
-        if (!event.items || !Array.isArray(event.items)) {
-            console.warn('El evento no tiene items definidos o no son un array:', event);
+        if ((!event.items || !Array.isArray(event.items)) &&
+            (!event.memberBasedItems || !Array.isArray(event.memberBasedItems))) {
+            console.warn('El evento no tiene items ni memberBasedItems definidos o no son arrays:', event);
             this.resultDetail.items = [];
             return;
         }
-        console.log('Items del evento:', event.items);
-        let resultItems = [];
-        if (result.items && Array.isArray(result.items)) {
-            console.log('Usando items del resultado:', result.items);
-            resultItems = result.items;
-        }
-        else if (result.scores && Array.isArray(result.scores)) {
-            console.log('Usando scores del resultado:', result.scores);
-            resultItems = result.scores;
-        }
-        const hasNestedEventItem = resultItems.length > 0 &&
-            typeof resultItems[0] === 'object' &&
-            'eventItem' in resultItems[0];
-        console.log('Items tienen estructura anidada:', hasNestedEventItem);
-        this.resultDetail.items = event.items.map((eventItem) => {
-            let score = 0;
-            if (hasNestedEventItem) {
-                const matchingItem = resultItems.find((item) => item.eventItem && item.eventItem.id === eventItem.id);
-                if (matchingItem)
-                    score = matchingItem.score || 0;
+        if (event.type === 'MEMBER_BASED' &&
+            event.memberBasedItems &&
+            Array.isArray(event.memberBasedItems)) {
+            console.log('Evento de tipo MEMBER_BASED. Procesando memberBasedItems:', event.memberBasedItems);
+            let memberBasedResultItems = [];
+            if (result.memberBasedItems && Array.isArray(result.memberBasedItems)) {
+                console.log('Usando memberBasedItems del resultado:', result.memberBasedItems);
+                memberBasedResultItems = result.memberBasedItems;
             }
-            else {
-                const matchingItem = resultItems.find((item) => item.eventItemId === eventItem.id);
-                if (matchingItem)
-                    score = matchingItem.score || 0;
+            else if (result.memberBasedScores &&
+                Array.isArray(result.memberBasedScores)) {
+                console.log('Usando memberBasedScores del resultado:', result.memberBasedScores);
+                memberBasedResultItems = result.memberBasedScores;
             }
-            const percentage = eventItem.percentage || 0;
-            const weightedScore = (score * percentage) / 100;
-            return {
-                name: eventItem.name || `Ítem ${eventItem.id}`,
-                percentage: percentage,
-                score: score,
-                weightedScore: weightedScore,
-            };
-        });
+            const hasNestedEventItem = memberBasedResultItems.length > 0 &&
+                typeof memberBasedResultItems[0] === 'object' &&
+                'eventItem' in memberBasedResultItems[0];
+            console.log('MemberBasedItems tienen estructura anidada:', hasNestedEventItem);
+            this.resultDetail.items = event.memberBasedItems.map((eventItem) => {
+                let score = 0;
+                let matchCount = 0;
+                let totalWithCharacteristic = 0;
+                if (hasNestedEventItem) {
+                    const matchingItem = memberBasedResultItems.find((item) => item.eventItem && item.eventItem.id === eventItem.id);
+                    if (matchingItem) {
+                        score = matchingItem.score || 0;
+                        matchCount = matchingItem.matchCount || 0;
+                        totalWithCharacteristic = matchingItem.totalWithCharacteristic || 0;
+                    }
+                }
+                else {
+                    const matchingItem = memberBasedResultItems.find((item) => item.eventItemId === eventItem.id);
+                    if (matchingItem) {
+                        score = matchingItem.score || 0;
+                        matchCount = matchingItem.matchCount || 0;
+                        totalWithCharacteristic = matchingItem.totalWithCharacteristic || 0;
+                    }
+                }
+                const percentage = eventItem.percentage || 0;
+                const weightedScore = (score * percentage) / 100;
+                const matchInfo = totalWithCharacteristic > 0
+                    ? ` (${matchCount}/${totalWithCharacteristic})`
+                    : '';
+                return {
+                    name: (eventItem.name || `Ítem ${eventItem.id}`) + matchInfo,
+                    percentage: percentage,
+                    score: score,
+                    weightedScore: weightedScore,
+                };
+            });
+        }
+        else {
+            console.log('Items del evento:', event.items);
+            let resultItems = [];
+            if (result.items && Array.isArray(result.items)) {
+                console.log('Usando items del resultado:', result.items);
+                resultItems = result.items;
+            }
+            else if (result.scores && Array.isArray(result.scores)) {
+                console.log('Usando scores del resultado:', result.scores);
+                resultItems = result.scores;
+            }
+            const hasNestedEventItem = resultItems.length > 0 &&
+                typeof resultItems[0] === 'object' &&
+                'eventItem' in resultItems[0];
+            console.log('Items tienen estructura anidada:', hasNestedEventItem);
+            this.resultDetail.items = event.items.map((eventItem) => {
+                let score = 0;
+                if (hasNestedEventItem) {
+                    const matchingItem = resultItems.find((item) => item.eventItem && item.eventItem.id === eventItem.id);
+                    if (matchingItem)
+                        score = matchingItem.score || 0;
+                }
+                else {
+                    const matchingItem = resultItems.find((item) => item.eventItemId === eventItem.id);
+                    if (matchingItem)
+                        score = matchingItem.score || 0;
+                }
+                const percentage = eventItem.percentage || 0;
+                const weightedScore = (score * percentage) / 100;
+                return {
+                    name: eventItem.name || `Ítem ${eventItem.id}`,
+                    percentage: percentage,
+                    score: score,
+                    weightedScore: weightedScore,
+                };
+            });
+        }
         console.log('Items procesados para el modal:', this.resultDetail.items);
     }
     openModal() {
