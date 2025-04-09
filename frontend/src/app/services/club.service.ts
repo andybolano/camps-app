@@ -3,6 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export interface MemberCharacteristic {
+  id?: number;
+  name: string;
+  value: number;
+  matchCount?: number;
+}
+
 export interface Club {
   id: number;
   name: string;
@@ -19,6 +26,7 @@ export interface Club {
     id: number;
     name: string;
   };
+  memberCharacteristics?: MemberCharacteristic[];
 }
 
 export interface CreateClubDto {
@@ -33,6 +41,7 @@ export interface CreateClubDto {
   isPaid?: boolean;
   shieldUrl?: string;
   campId: number;
+  memberCharacteristics?: Omit<MemberCharacteristic, 'id'>[];
 }
 
 @Injectable({

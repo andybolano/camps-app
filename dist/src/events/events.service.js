@@ -18,12 +18,14 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const event_entity_1 = require("./entities/event.entity");
 const event_item_entity_1 = require("./entities/event-item.entity");
+const member_based_event_item_entity_1 = require("./entities/member-based-event-item.entity");
 const camps_service_1 = require("../camps/camps.service");
 const results_service_1 = require("../results/results.service");
 let EventsService = class EventsService {
-    constructor(eventsRepository, eventItemsRepository, campsService, resultsService) {
+    constructor(eventsRepository, eventItemsRepository, memberBasedEventItemsRepository, campsService, resultsService) {
         this.eventsRepository = eventsRepository;
         this.eventItemsRepository = eventItemsRepository;
+        this.memberBasedEventItemsRepository = memberBasedEventItemsRepository;
         this.campsService = campsService;
         this.resultsService = resultsService;
     }
@@ -41,35 +43,44 @@ let EventsService = class EventsService {
         }
     }
     async create(createEventDto) {
-        const { campId, items, ...eventData } = createEventDto;
+        const { campId, items, memberBasedItems, ...eventData } = createEventDto;
         const camp = await this.campsService.findOne(campId);
         const event = this.eventsRepository.create({
             ...eventData,
             camp,
         });
         await this.eventsRepository.save(event);
-        const eventItems = items.map((item) => this.eventItemsRepository.create({
-            ...item,
-            event,
-        }));
-        event.items = await this.eventItemsRepository.save(eventItems);
+        if (items && items.length > 0) {
+            const eventItems = items.map((item) => this.eventItemsRepository.create({
+                ...item,
+                event,
+            }));
+            event.items = await this.eventItemsRepository.save(eventItems);
+        }
+        if (memberBasedItems && memberBasedItems.length > 0) {
+            const memberBasedEventItems = memberBasedItems.map((item) => this.memberBasedEventItemsRepository.create({
+                ...item,
+                event,
+            }));
+            event.memberBasedItems = await this.memberBasedEventItemsRepository.save(memberBasedEventItems);
+        }
         return event;
     }
     async findAll() {
         return this.eventsRepository.find({
-            relations: ['camp', 'items'],
+            relations: ['camp', 'items', 'memberBasedItems'],
         });
     }
     async findByCamp(campId) {
         return this.eventsRepository.find({
             where: { camp: { id: campId } },
-            relations: ['camp', 'items'],
+            relations: ['camp', 'items', 'memberBasedItems'],
         });
     }
     async findOne(id) {
         const event = await this.eventsRepository.findOne({
             where: { id },
-            relations: ['camp', 'items', 'results'],
+            relations: ['camp', 'items', 'memberBasedItems', 'results'],
         });
         if (!event) {
             throw new common_1.NotFoundException(`Event with ID ${id} not found`);
@@ -79,6 +90,15 @@ let EventsService = class EventsService {
     async update(id, updateEventDto) {
         const event = await this.findOne(id);
         const hasScores = await this.eventHasScores(id);
+        if (updateEventDto.name !== undefined) {
+            event.name = updateEventDto.name;
+        }
+        if (updateEventDto.description !== undefined) {
+            event.description = updateEventDto.description;
+        }
+        if (updateEventDto.type !== undefined) {
+            event.type = updateEventDto.type;
+        }
         if (updateEventDto.items) {
             const existingItems = await this.eventItemsRepository.find({
                 where: { event: { id } },
@@ -171,25 +191,83 @@ let EventsService = class EventsService {
                 throw new Error(`Failed to update event items: ${error.message}`);
             }
         }
-        if (hasScores) {
-            if ((updateEventDto.name && updateEventDto.name !== event.name) ||
-                (updateEventDto.description &&
-                    updateEventDto.description !== event.description) ||
-                updateEventDto.campId) {
-                throw new common_1.BadRequestException('No se pueden modificar los datos básicos del evento porque ya tiene calificaciones registradas.');
+        if (updateEventDto.memberBasedItems) {
+            const existingMemberBasedItems = await this.memberBasedEventItemsRepository.find({
+                where: { event: { id } },
+                relations: ['event'],
+            });
+            const updatedMemberBasedItemsMap = new Map();
+            updateEventDto.memberBasedItems.forEach((item) => {
+                if (item.id) {
+                    updatedMemberBasedItemsMap.set(item.id, item);
+                }
+            });
+            const memberBasedItemsToDelete = existingMemberBasedItems.filter((item) => !updatedMemberBasedItemsMap.has(item.id));
+            const memberBasedItemsToUpdate = existingMemberBasedItems.filter((item) => updatedMemberBasedItemsMap.has(item.id));
+            const memberBasedItemsToCreate = updateEventDto.memberBasedItems.filter((item) => !item.id ||
+                !existingMemberBasedItems.some((existing) => existing.id === item.id));
+            try {
+                if (hasScores) {
+                    if (memberBasedItemsToDelete.length > 0) {
+                        throw new common_1.BadRequestException('No se pueden actualizar los ítems de calificación porque este evento ya tiene calificaciones registradas.');
+                    }
+                    for (const item of memberBasedItemsToUpdate) {
+                        const updateData = updatedMemberBasedItemsMap.get(item.id);
+                        const itemHasScores = await this.eventItemHasScores(item.id);
+                        if (itemHasScores) {
+                            if ((updateData.name && updateData.name !== item.name) ||
+                                (updateData.percentage !== undefined &&
+                                    updateData.percentage !== item.percentage)) {
+                                throw new common_1.BadRequestException(`No se puede modificar el ítem "${item.name}" porque ya tiene calificaciones asociadas.`);
+                            }
+                        }
+                    }
+                }
+                else {
+                    if (memberBasedItemsToDelete.length > 0) {
+                        const idsToDelete = memberBasedItemsToDelete.map((item) => item.id);
+                        for (const item of memberBasedItemsToDelete) {
+                            await this.resultsService.deleteResultItemsByEventItem(item.id);
+                        }
+                        await this.memberBasedEventItemsRepository.delete(idsToDelete);
+                    }
+                }
+                for (const item of memberBasedItemsToUpdate) {
+                    const updateData = updatedMemberBasedItemsMap.get(item.id);
+                    await this.memberBasedEventItemsRepository.update(item.id, updateData);
+                }
+                if (memberBasedItemsToCreate.length > 0) {
+                    try {
+                        const newItems = memberBasedItemsToCreate.map((item) => {
+                            return this.memberBasedEventItemsRepository.create({
+                                name: item.name,
+                                percentage: item.percentage,
+                                applicableCharacteristics: item.applicableCharacteristics,
+                                calculationType: item.calculationType || 'PROPORTION',
+                                isRequired: item.isRequired || false,
+                                event: event,
+                            });
+                        });
+                        await this.memberBasedEventItemsRepository.save(newItems);
+                    }
+                    catch (error) {
+                        console.error('Error creating new member-based items:', error);
+                        throw new Error('Failed to create new member-based event items');
+                    }
+                }
+            }
+            catch (error) {
+                if (error instanceof common_1.BadRequestException) {
+                    throw error;
+                }
+                else {
+                    console.error('Error updating event member-based items:', error);
+                    throw new Error('Error al actualizar los ítems del evento');
+                }
             }
         }
-        else {
-            if (updateEventDto.campId) {
-                const camp = await this.campsService.findOne(updateEventDto.campId);
-                event.camp = camp;
-            }
-            const eventData = { ...updateEventDto };
-            delete eventData.campId;
-            delete eventData.items;
-            Object.assign(event, eventData);
-        }
-        return this.eventsRepository.save(event);
+        await this.eventsRepository.save(event);
+        return this.findOne(id);
     }
     async remove(id) {
         const hasScores = await this.eventHasScores(id);
@@ -207,8 +285,10 @@ exports.EventsService = EventsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(event_entity_1.Event)),
     __param(1, (0, typeorm_1.InjectRepository)(event_item_entity_1.EventItem)),
-    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => results_service_1.ResultsService))),
+    __param(2, (0, typeorm_1.InjectRepository)(member_based_event_item_entity_1.MemberBasedEventItem)),
+    __param(4, (0, common_1.Inject)((0, common_1.forwardRef)(() => results_service_1.ResultsService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         camps_service_1.CampsService,
         results_service_1.ResultsService])

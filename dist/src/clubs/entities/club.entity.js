@@ -13,6 +13,7 @@ exports.Club = void 0;
 const typeorm_1 = require("typeorm");
 const camp_entity_1 = require("../../camps/entities/camp.entity");
 const result_entity_1 = require("../../results/entities/result.entity");
+const member_characteristic_entity_1 = require("./member-characteristic.entity");
 let Club = class Club {
 };
 exports.Club = Club;
@@ -68,6 +69,12 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => result_entity_1.Result, (result) => result.club),
     __metadata("design:type", Array)
 ], Club.prototype, "results", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => member_characteristic_entity_1.MemberCharacteristic, (characteristic) => characteristic.club, {
+        cascade: true,
+    }),
+    __metadata("design:type", Array)
+], Club.prototype, "memberCharacteristics", void 0);
 exports.Club = Club = __decorate([
     (0, typeorm_1.Entity)()
 ], Club);

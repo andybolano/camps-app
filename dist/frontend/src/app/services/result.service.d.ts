@@ -4,12 +4,19 @@ export interface ResultScore {
     eventItemId: number;
     score: number;
 }
+export interface MemberBasedResultScore {
+    eventItemId: number;
+    matchCount: number;
+    totalWithCharacteristic: number;
+}
 export interface Result {
     id?: number;
     eventId: number;
     clubId: number;
     scores?: ResultScore[];
     items?: ResultScore[];
+    memberBasedScores?: MemberBasedResultScore[];
+    memberBasedItems?: MemberBasedResultScore[];
     totalScore?: number;
     rank?: number;
     club?: {
@@ -21,6 +28,7 @@ export interface Result {
         name: string;
         date?: string;
         description?: string;
+        type?: 'REGULAR' | 'MEMBER_BASED';
     };
 }
 export declare class ResultService {

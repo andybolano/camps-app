@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateClubDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
+const create_member_characteristic_dto_1 = require("./create-member-characteristic.dto");
 class CreateClubDto {
 }
 exports.CreateClubDto = CreateClubDto;
@@ -77,4 +78,11 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], CreateClubDto.prototype, "campId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => create_member_characteristic_dto_1.CreateMemberCharacteristicDto),
+    __metadata("design:type", Array)
+], CreateClubDto.prototype, "memberCharacteristics", void 0);
 //# sourceMappingURL=create-club.dto.js.map

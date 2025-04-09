@@ -3,11 +3,11 @@ import {
   IsNumber,
   IsArray,
   ValidateNested,
-  ArrayMinSize,
   IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateResultItemDto } from './create-result-item.dto';
+import { CreateResultMemberBasedItemDto } from './create-result-member-based-item.dto';
 
 export class CreateResultDto {
   @IsNotEmpty()
@@ -19,10 +19,16 @@ export class CreateResultDto {
   eventId: number;
 
   @IsArray()
-  @ArrayMinSize(1)
+  @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CreateResultItemDto)
-  items: CreateResultItemDto[];
+  items?: CreateResultItemDto[];
+
+  @IsArray()
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => CreateResultMemberBasedItemDto)
+  memberBasedItems?: CreateResultMemberBasedItemDto[];
 
   @IsOptional()
   @IsNumber()

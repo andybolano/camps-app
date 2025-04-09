@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { ResultItem } from './entities/result-item.entity';
+import { ResultMemberBasedItem } from './entities/result-member-based-item.entity';
 import { CreateResultDto } from './dto/create-result.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
 import { ClubsService } from '../clubs/clubs.service';
@@ -21,6 +22,8 @@ export class ResultsService {
     private resultsRepository: Repository<Result>,
     @InjectRepository(ResultItem)
     private resultItemsRepository: Repository<ResultItem>,
+    @InjectRepository(ResultMemberBasedItem)
+    private resultMemberBasedItemsRepository: Repository<ResultMemberBasedItem>,
     private clubsService: ClubsService,
     @Inject(forwardRef(() => EventsService))
     private eventsService: EventsService,
@@ -30,6 +33,7 @@ export class ResultsService {
     const { clubId, eventId } = createResultDto;
     // Manejar tanto 'items' (del DTO) como 'scores' (del cliente)
     const items = createResultDto.items || (createResultDto as any).scores;
+    const memberBasedItems = createResultDto.memberBasedItems;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       throw new BadRequestException(
@@ -66,61 +70,87 @@ export class ResultsService {
 
     // Map event items and calculate total score
     let totalScore = 0;
-    const resultItems = [];
 
-    for (const item of items) {
-      // Find the event item
-      console.log(
-        `[DEBUG] Buscando item con ID ${item.eventItemId} en evento ${event.id} (${event.name})`,
-      );
-      console.log(
-        `[DEBUG] Items disponibles en el evento:`,
-        event.items.map((i) => ({ id: i.id, name: i.name })),
-      );
+    // Process regular items if they exist
+    if (items && items.length > 0) {
+      const resultItems = [];
 
-      const eventItem = event.items.find((ei) => ei.id === item.eventItemId);
-      if (!eventItem) {
-        // Intento alternativo: si los IDs son string vs number
-        const eventItemAlt = event.items.find(
-          (ei) => String(ei.id) === String(item.eventItemId),
-        );
-        if (eventItemAlt) {
-          console.log(
-            `[DEBUG] Item encontrado usando comparación de strings: ${eventItemAlt.id} vs ${item.eventItemId}`,
+      for (const item of items) {
+        // Find the event item
+        const eventItem =
+          event.items.find((ei) => ei.id === item.eventItemId) ||
+          event.items.find((ei) => String(ei.id) === String(item.eventItemId));
+
+        if (!eventItem) {
+          throw new NotFoundException(
+            `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
           );
-          // Crear result item con el item alternativo encontrado
-          const resultItem = this.resultItemsRepository.create({
-            score: item.score,
-            eventItem: eventItemAlt,
+        }
+
+        // Create result item
+        const resultItem = this.resultItemsRepository.create({
+          score: item.score,
+          eventItem,
+          result,
+        });
+
+        resultItems.push(resultItem);
+
+        // Calculate weighted score
+        totalScore += (item.score * eventItem.percentage) / 100;
+      }
+
+      // Save result items
+      result.items = await this.resultItemsRepository.save(resultItems);
+    }
+
+    // Process member-based items if they exist
+    if (memberBasedItems && memberBasedItems.length > 0) {
+      const resultMemberBasedItems = [];
+
+      for (const item of memberBasedItems) {
+        // Find the member-based event item
+        const eventItem =
+          event.memberBasedItems.find((ei) => ei.id === item.eventItemId) ||
+          event.memberBasedItems.find(
+            (ei) => String(ei.id) === String(item.eventItemId),
+          );
+
+        if (!eventItem) {
+          throw new NotFoundException(
+            `Member-based event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
+          );
+        }
+
+        // Calculate score based on match count and total with characteristic
+        const proportion =
+          item.totalWithCharacteristic > 0
+            ? item.matchCount / item.totalWithCharacteristic
+            : 0;
+        const score = proportion * 10; // Scale to 0-10
+
+        // Create result item
+        const resultMemberBasedItem =
+          this.resultMemberBasedItemsRepository.create({
+            score,
+            matchCount: item.matchCount,
+            totalWithCharacteristic: item.totalWithCharacteristic,
+            eventItem,
             result,
           });
 
-          resultItems.push(resultItem);
-          // Calculate weighted score
-          totalScore += (item.score * eventItemAlt.percentage) / 100;
-          continue; // Continuar con el siguiente item
-        }
+        resultMemberBasedItems.push(resultMemberBasedItem);
 
-        throw new NotFoundException(
-          `Event item with ID ${item.eventItemId} not found in event ${event.id} (${event.name})`,
-        );
+        // Calculate weighted score
+        totalScore += (score * eventItem.percentage) / 100;
       }
 
-      // Create result item
-      const resultItem = this.resultItemsRepository.create({
-        score: item.score,
-        eventItem,
-        result,
-      });
-
-      resultItems.push(resultItem);
-
-      // Calculate weighted score
-      totalScore += (item.score * eventItem.percentage) / 100;
+      // Save result member-based items
+      result.memberBasedItems =
+        await this.resultMemberBasedItemsRepository.save(
+          resultMemberBasedItems,
+        );
     }
-
-    // Save result items
-    result.items = await this.resultItemsRepository.save(resultItems);
 
     // Update total score
     if (createResultDto.totalScore !== undefined) {
@@ -137,14 +167,28 @@ export class ResultsService {
 
   async findAll(): Promise<Result[]> {
     return this.resultsRepository.find({
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
     });
   }
 
   async findOne(id: number): Promise<Result> {
     const result = await this.resultsRepository.findOne({
       where: { id },
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
     });
 
     if (!result) {
@@ -157,14 +201,28 @@ export class ResultsService {
   async findByClub(clubId: number): Promise<Result[]> {
     return this.resultsRepository.find({
       where: { club: { id: clubId } },
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
     });
   }
 
   async findByEvent(eventId: number): Promise<Result[]> {
     return this.resultsRepository.find({
       where: { event: { id: eventId } },
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
       order: { totalScore: 'DESC' },
     });
   }
@@ -179,14 +237,28 @@ export class ResultsService {
         event: { id: eventId },
         club: { id: clubId },
       },
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
     });
   }
 
   async findByCamp(campId: number): Promise<Result[]> {
     return this.resultsRepository.find({
       where: { event: { camp: { id: campId } } },
-      relations: ['club', 'event', 'items', 'items.eventItem'],
+      relations: [
+        'club',
+        'event',
+        'items',
+        'items.eventItem',
+        'memberBasedItems',
+        'memberBasedItems.eventItem',
+      ],
     });
   }
 
@@ -422,10 +494,21 @@ export class ResultsService {
 
   // Nuevo método para verificar si un ítem de evento tiene calificaciones
   async hasScoresForEventItem(eventItemId: number): Promise<boolean> {
-    const resultItems = await this.resultItemsRepository.find({
+    // First try to find a regular result item with this event item
+    const resultItem = await this.resultItemsRepository.findOne({
       where: { eventItem: { id: eventItemId } },
     });
 
-    return resultItems.length > 0;
+    if (resultItem) {
+      return true;
+    }
+
+    // If not found, check for member-based result items
+    const memberBasedResultItem =
+      await this.resultMemberBasedItemsRepository.findOne({
+        where: { eventItem: { id: eventItemId } },
+      });
+
+    return !!memberBasedResultItem;
   }
 }

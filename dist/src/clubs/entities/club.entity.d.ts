@@ -1,5 +1,6 @@
 import { Camp } from '../../camps/entities/camp.entity';
 import { Result } from '../../results/entities/result.entity';
+import { MemberCharacteristic } from './member-characteristic.entity';
 export declare class Club {
     id: number;
     name: string;
@@ -14,4 +15,5 @@ export declare class Club {
     shieldUrl: string;
     camp: Camp;
     results: Result[];
+    memberCharacteristics: MemberCharacteristic[];
 }

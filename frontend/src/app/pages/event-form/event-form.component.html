@@ -55,11 +55,28 @@
                 formControlName="description"
               ></textarea>
             </div>
+
+            <div class="mb-3">
+              <label for="type" class="form-label">Tipo de Evento*</label>
+              <select
+                class="form-select"
+                id="type"
+                formControlName="type"
+              >
+                <option *ngFor="let type of eventTypes" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+              <div class="form-text text-muted">
+                <strong>Regular:</strong> Calificación directa con valores numéricos.<br>
+                <strong>Basado en Características:</strong> Calificación basada en características de los miembros.
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Planilla de calificación (ítems) -->
-        <div class="card mb-4">
+        <!-- Planilla de calificación (ítems regulares) - Solo si es evento regular -->
+        <div class="card mb-4" *ngIf="eventType === 'REGULAR'">
           <div class="card-header d-flex justify-content-between">
             <h5 class="mb-0">Planilla de Calificación</h5>
             <button
@@ -137,6 +154,153 @@
                     type="button"
                     class="btn btn-sm btn-danger"
                     (click)="removeItem(i)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Planilla de calificación basada en características de miembros - Solo si es evento basado en miembros -->
+        <div class="card mb-4" *ngIf="eventType === 'MEMBER_BASED'">
+          <div class="card-header d-flex justify-content-between">
+            <h5 class="mb-0">Planilla de Calificación Basada en Características</h5>
+            <button
+              type="button"
+              class="btn btn-sm btn-success"
+              (click)="addMemberBasedItem()"
+            >
+              Añadir Ítem Basado en Características
+            </button>
+          </div>
+          <div class="card-body">
+            <div *ngIf="memberBasedItems.length === 0" class="alert alert-info">
+              No hay ítems basados en características definidos. Haga clic
+              en "Añadir Ítem Basado en Características" para crear uno.
+            </div>
+
+            <div formArrayName="memberBasedItems">
+              <div
+                *ngFor="let item of memberBasedItems.controls; let i = index"
+                [formGroupName]="i"
+                class="row mb-4 align-items-end border-bottom pb-3"
+              >
+                <div class="col-md-6">
+                  <label [for]="'mbItemName' + i" class="form-label"
+                    >Nombre del Ítem*</label
+                  >
+                  <input
+                    type="text"
+                    class="form-control"
+                    [id]="'mbItemName' + i"
+                    formControlName="name"
+                    [class.is-invalid]="
+                      item.get('name')?.invalid && item.get('name')?.touched
+                    "
+                  />
+                  <div
+                    class="invalid-feedback"
+                    *ngIf="
+                      item.get('name')?.invalid && item.get('name')?.touched
+                    "
+                  >
+                    El nombre del ítem es obligatorio.
+                  </div>
+                </div>
+
+                <div class="col-md-6">
+                  <label [for]="'mbItemPoints' + i" class="form-label"
+                    >Porcentaje (%)*</label
+                  >
+                  <input
+                    type="number"
+                    class="form-control"
+                    [id]="'mbItemPoints' + i"
+                    formControlName="percentage"
+                    min="0"
+                    max="100"
+                    [class.is-invalid]="
+                      item.get('percentage')?.invalid &&
+                      item.get('percentage')?.touched
+                    "
+                  />
+                  <div
+                    class="invalid-feedback"
+                    *ngIf="
+                      item.get('percentage')?.invalid &&
+                      item.get('percentage')?.touched
+                    "
+                  >
+                    El porcentaje debe ser un número entre 0 y 100.
+                  </div>
+                </div>
+
+                <div class="col-md-12 mt-2">
+                  <label [for]="'mbItemChar' + i" class="form-label"
+                    >Características Aplicables*</label
+                  >
+                  <div class="d-flex flex-wrap gap-3">
+                    <div class="form-check" *ngFor="let char of characteristicOptions">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        [id]="'mbItemChar' + i + char.value"
+                        [value]="char.value"
+                        (change)="onCharacteristicChange($event, i, char.value)"
+                        [checked]="isCharacteristicSelected(i, char.value)"
+                      />
+                      <label class="form-check-label" [for]="'mbItemChar' + i + char.value">
+                        {{ char.label }}
+                      </label>
+                    </div>
+                  </div>
+                  <div
+                    class="text-danger small mt-1"
+                    *ngIf="
+                      item.get('applicableCharacteristics')?.invalid &&
+                      item.get('applicableCharacteristics')?.touched
+                    "
+                  >
+                    Debe seleccionar al menos una característica.
+                  </div>
+                </div>
+
+                <div class="col-md-6 mt-2">
+                  <label [for]="'mbItemCalc' + i" class="form-label"
+                    >Tipo de Cálculo*</label
+                  >
+                  <select
+                    class="form-select"
+                    [id]="'mbItemCalc' + i"
+                    formControlName="calculationType"
+                  >
+                    <option *ngFor="let calc of calculationTypes" [value]="calc.value">
+                      {{ calc.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-md-4 mt-2">
+                  <div class="form-check">
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      [id]="'mbItemReq' + i"
+                      formControlName="isRequired"
+                    />
+                    <label class="form-check-label" [for]="'mbItemReq' + i">
+                      Es obligatorio
+                    </label>
+                  </div>
+                </div>
+
+                <div class="col-md-2 mt-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-danger"
+                    (click)="removeMemberBasedItem(i)"
                   >
                     Eliminar
                   </button>

@@ -5,8 +5,11 @@ import {
   IsPositive,
   IsBoolean,
   IsOptional,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+import { CreateMemberCharacteristicDto } from './create-member-characteristic.dto';
 
 export class CreateClubDto {
   @IsNotEmpty()
@@ -57,4 +60,10 @@ export class CreateClubDto {
   @IsNotEmpty()
   @IsNumber()
   campId: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateMemberCharacteristicDto)
+  memberCharacteristics?: CreateMemberCharacteristicDto[];
 }

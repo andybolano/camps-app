@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Camp } from '../../camps/entities/camp.entity';
 import { Result } from '../../results/entities/result.entity';
+import { MemberCharacteristic } from './member-characteristic.entity';
 
 @Entity()
 export class Club {
@@ -48,4 +49,13 @@ export class Club {
 
   @OneToMany(() => Result, (result) => result.club)
   results: Result[];
+
+  @OneToMany(
+    () => MemberCharacteristic,
+    (characteristic) => characteristic.club,
+    {
+      cascade: true,
+    },
+  )
+  memberCharacteristics: MemberCharacteristic[];
 }

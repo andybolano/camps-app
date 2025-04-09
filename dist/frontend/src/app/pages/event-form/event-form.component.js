@@ -27,6 +27,21 @@ let EventFormComponent = class EventFormComponent {
         this.isLoading = false;
         this.errorMessage = '';
         this.campName = '';
+        this.eventTypes = [
+            { value: 'REGULAR', label: 'Regular' },
+            { value: 'MEMBER_BASED', label: 'Basado en Características de Miembros' },
+        ];
+        this.characteristicOptions = [
+            { value: 'minorsCount', label: 'Menores' },
+            { value: 'companionsCount', label: 'Acompañantes' },
+            { value: 'participantsCount', label: 'Participantes' },
+            { value: 'guestsCount', label: 'Invitados' },
+            { value: 'economsCount', label: 'Ecónomos' },
+        ];
+        this.calculationTypes = [
+            { value: 'PROPORTION', label: 'Proporción' },
+            { value: 'TOTAL', label: 'Total' },
+        ];
     }
     ngOnInit() {
         this.initForm();
@@ -44,7 +59,12 @@ let EventFormComponent = class EventFormComponent {
         this.eventForm = this.fb.group({
             name: ['', [forms_1.Validators.required]],
             description: [''],
+            type: ['REGULAR', [forms_1.Validators.required]],
             items: this.fb.array([]),
+            memberBasedItems: this.fb.array([]),
+        });
+        this.eventForm.get('type')?.valueChanges.subscribe((type) => {
+            console.log('Event type changed to:', type);
         });
     }
     loadCampData() {
@@ -67,11 +87,18 @@ let EventFormComponent = class EventFormComponent {
                 this.eventForm.patchValue({
                     name: event.name,
                     description: event.description,
+                    type: event.type || 'REGULAR',
                 });
                 if (event.items && event.items.length > 0) {
                     this.clearItems();
                     event.items.forEach((item) => {
                         this.addItem(item.name, item.percentage);
+                    });
+                }
+                if (event.memberBasedItems && event.memberBasedItems.length > 0) {
+                    this.clearMemberBasedItems();
+                    event.memberBasedItems.forEach((item) => {
+                        this.addMemberBasedItem(item.name, item.percentage, item.applicableCharacteristics, item.calculationType, item.isRequired);
                     });
                 }
                 this.isLoading = false;
@@ -85,6 +112,12 @@ let EventFormComponent = class EventFormComponent {
     get items() {
         return this.eventForm.get('items');
     }
+    get memberBasedItems() {
+        return this.eventForm.get('memberBasedItems');
+    }
+    get eventType() {
+        return this.eventForm.get('type')?.value;
+    }
     addItem(name = '', percentage = 0) {
         const itemForm = this.fb.group({
             name: [name, forms_1.Validators.required],
@@ -95,12 +128,36 @@ let EventFormComponent = class EventFormComponent {
         });
         this.items.push(itemForm);
     }
+    addMemberBasedItem(name = '', percentage = 0, applicableCharacteristics = [], calculationType = 'PROPORTION', isRequired = false) {
+        const itemForm = this.fb.group({
+            name: [name, forms_1.Validators.required],
+            percentage: [
+                percentage,
+                [forms_1.Validators.required, forms_1.Validators.min(0), forms_1.Validators.max(100)],
+            ],
+            applicableCharacteristics: [
+                applicableCharacteristics,
+                [forms_1.Validators.required, forms_1.Validators.minLength(1)],
+            ],
+            calculationType: [calculationType, forms_1.Validators.required],
+            isRequired: [isRequired],
+        });
+        this.memberBasedItems.push(itemForm);
+    }
     removeItem(index) {
         this.items.removeAt(index);
+    }
+    removeMemberBasedItem(index) {
+        this.memberBasedItems.removeAt(index);
     }
     clearItems() {
         while (this.items.length !== 0) {
             this.items.removeAt(0);
+        }
+    }
+    clearMemberBasedItems() {
+        while (this.memberBasedItems.length !== 0) {
+            this.memberBasedItems.removeAt(0);
         }
     }
     onSubmit() {
@@ -114,6 +171,23 @@ let EventFormComponent = class EventFormComponent {
             ...this.eventForm.value,
             campId: this.campId,
         };
+        if (eventData.type === 'REGULAR' &&
+            (!eventData.items || eventData.items.length === 0)) {
+            this.errorMessage =
+                'Los eventos regulares requieren al menos un ítem de calificación.';
+            this.isLoading = false;
+            window.scrollTo(0, 0);
+            return;
+        }
+        if (eventData.type === 'MEMBER_BASED' &&
+            (!eventData.memberBasedItems || eventData.memberBasedItems.length === 0)) {
+            this.errorMessage =
+                'Los eventos basados en miembros requieren al menos un ítem basado en características.';
+            this.isLoading = false;
+            window.scrollTo(0, 0);
+            return;
+        }
+        console.log('Enviando datos del evento:', eventData);
         if (this.isEdit && this.eventId) {
             this.eventService.updateEvent(this.eventId, eventData).subscribe({
                 next: () => {
@@ -165,6 +239,47 @@ let EventFormComponent = class EventFormComponent {
     }
     cancel() {
         this.router.navigate(['/camps', this.campId, 'events']);
+    }
+    addCharacteristic(index, value) {
+        const mbItemForm = this.getMultiBranchItemAt(index);
+        if (!mbItemForm)
+            return;
+        const characteristics = mbItemForm.get('applicableCharacteristics')?.value || [];
+        if (!characteristics.includes(value)) {
+            mbItemForm
+                .get('applicableCharacteristics')
+                ?.setValue([...characteristics, value]);
+        }
+    }
+    removeCharacteristic(index, value) {
+        const mbItemForm = this.getMultiBranchItemAt(index);
+        if (!mbItemForm)
+            return;
+        const characteristics = mbItemForm.get('applicableCharacteristics')?.value || [];
+        mbItemForm
+            .get('applicableCharacteristics')
+            ?.setValue(characteristics.filter((c) => c !== value));
+    }
+    isCharacteristicSelected(index, value) {
+        const mbItemForm = this.getMultiBranchItemAt(index);
+        if (!mbItemForm)
+            return false;
+        const characteristics = mbItemForm.get('applicableCharacteristics')?.value || [];
+        return characteristics.includes(value);
+    }
+    onCharacteristicChange(event, index, value) {
+        const target = event.target;
+        if (target.checked) {
+            this.addCharacteristic(index, value);
+        }
+        else {
+            this.removeCharacteristic(index, value);
+        }
+    }
+    getMultiBranchItemAt(index) {
+        return this.eventForm?.get('memberBasedItems')
+            ? this.eventForm.get('memberBasedItems').at(index)
+            : null;
     }
 };
 exports.EventFormComponent = EventFormComponent;

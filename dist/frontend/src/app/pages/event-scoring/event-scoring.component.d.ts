@@ -30,6 +30,8 @@ export declare class EventScoringComponent implements OnInit {
     private loadEvent;
     private loadClubs;
     private buildScoresForm;
+    private buildRegularScoresForm;
+    private buildMemberBasedScoresForm;
     private loadEventResults;
     private updateCurrentRank;
     private checkExistingResult;
@@ -42,4 +44,5 @@ export declare class EventScoringComponent implements OnInit {
     getRankSuffix(rank: number): string;
     getClubName(clubId: number | null): string;
     getRankBadgeClass(rank: number | undefined): any;
+    getItemPercentage(itemId: number | undefined): number;
 }

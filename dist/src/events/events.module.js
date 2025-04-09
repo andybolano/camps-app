@@ -13,6 +13,7 @@ const events_service_1 = require("./events.service");
 const events_controller_1 = require("./events.controller");
 const event_entity_1 = require("./entities/event.entity");
 const event_item_entity_1 = require("./entities/event-item.entity");
+const member_based_event_item_entity_1 = require("./entities/member-based-event-item.entity");
 const camps_module_1 = require("../camps/camps.module");
 const results_module_1 = require("../results/results.module");
 let EventsModule = class EventsModule {
@@ -21,7 +22,7 @@ exports.EventsModule = EventsModule;
 exports.EventsModule = EventsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([event_entity_1.Event, event_item_entity_1.EventItem]),
+            typeorm_1.TypeOrmModule.forFeature([event_entity_1.Event, event_item_entity_1.EventItem, member_based_event_item_entity_1.MemberBasedEventItem]),
             camps_module_1.CampsModule,
             (0, common_1.forwardRef)(() => results_module_1.ResultsModule),
         ],

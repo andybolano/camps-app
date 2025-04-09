@@ -39,6 +39,7 @@ let ResultService = class ResultService {
             clubId: result.clubId,
             eventId: result.eventId,
             items: result.scores,
+            memberBasedItems: result.memberBasedScores,
             totalScore: result.totalScore,
         };
         console.log('Enviando resultado al backend:', backendFormat);
@@ -49,6 +50,7 @@ let ResultService = class ResultService {
             clubId: result.clubId,
             eventId: result.eventId,
             items: result.scores,
+            memberBasedItems: result.memberBasedScores,
             totalScore: result.totalScore,
         };
         console.log('Actualizando resultado en el backend:', backendFormat);
@@ -83,6 +85,27 @@ let ResultService = class ResultService {
                     };
                 });
                 console.log('Items convertidos a scores (después de filtrar):', result.scores);
+            }
+            if (result.memberBasedItems && !result.memberBasedScores) {
+                console.log('Estructura de memberBasedItems del backend:', result.memberBasedItems);
+                const eventId = result.eventId || result.event?.id;
+                result.memberBasedScores = (result.memberBasedItems || [])
+                    .filter((item) => {
+                    const itemEventId = item.eventItem?.event?.id;
+                    if (itemEventId && eventId && itemEventId !== eventId) {
+                        console.warn(`[WARNING] MemberBasedItem ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`);
+                        return false;
+                    }
+                    return true;
+                })
+                    .map((item) => {
+                    return {
+                        eventItemId: item.eventItem?.id || 0,
+                        matchCount: item.matchCount,
+                        totalWithCharacteristic: item.totalWithCharacteristic,
+                    };
+                });
+                console.log('MemberBasedItems convertidos a memberBasedScores (después de filtrar):', result.memberBasedScores);
             }
         }
         console.log('Resultado normalizado:', result);

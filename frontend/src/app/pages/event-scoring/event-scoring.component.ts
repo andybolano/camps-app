@@ -8,7 +8,12 @@ import {
   Validators,
 } from '@angular/forms';
 import { EventService, Event } from '../../services/event.service';
-import { ResultService, Result } from '../../services/result.service';
+import {
+  ResultService,
+  Result,
+  ResultScore,
+  MemberBasedResultScore,
+} from '../../services/result.service';
 import { ClubService, Club } from '../../services/club.service';
 
 @Component({
@@ -129,12 +134,32 @@ export class EventScoringComponent implements OnInit {
   }
 
   private buildScoresForm(): void {
-    if (!this.event || !this.event.items || this.event.items.length === 0) {
-      console.warn('No hay items para construir el formulario');
+    if (!this.event) {
+      console.warn('No hay evento para construir el formulario');
       return;
     }
 
-    console.log('Construyendo formulario con items:', this.event.items);
+    console.log('Tipo de evento:', this.event.type);
+
+    if (this.event.type === 'REGULAR') {
+      this.buildRegularScoresForm();
+    } else if (this.event.type === 'MEMBER_BASED') {
+      this.buildMemberBasedScoresForm();
+    } else {
+      console.warn(`Tipo de evento desconocido: ${this.event.type}`);
+    }
+  }
+
+  private buildRegularScoresForm(): void {
+    if (!this.event || !this.event.items || this.event.items.length === 0) {
+      console.warn('No hay items regulares para construir el formulario');
+      return;
+    }
+
+    console.log(
+      'Construyendo formulario con items regulares:',
+      this.event.items,
+    );
     const scoresGroup = this.fb.group({});
 
     // Crear un control para cada ítem del evento
@@ -153,7 +178,57 @@ export class EventScoringComponent implements OnInit {
     });
 
     this.scoringForm.setControl('scores', scoresGroup);
-    console.log('Formulario construido:', this.scoringForm.value);
+    console.log(
+      'Formulario para items regulares construido:',
+      this.scoringForm.value,
+    );
+  }
+
+  private buildMemberBasedScoresForm(): void {
+    if (
+      !this.event ||
+      !this.event.memberBasedItems ||
+      this.event.memberBasedItems.length === 0
+    ) {
+      console.warn(
+        'No hay items basados en miembros para construir el formulario',
+      );
+      return;
+    }
+
+    console.log(
+      'Construyendo formulario con items basados en miembros:',
+      this.event.memberBasedItems,
+    );
+
+    // Crear grupo para los scores regulares (vacío en este caso)
+    const scoresGroup = this.fb.group({});
+    this.scoringForm.setControl('scores', scoresGroup);
+
+    // Crear grupo para los scores basados en miembros
+    const memberBasedScoresGroup = this.fb.group({});
+
+    // Crear un control para cada ítem basado en miembros
+    this.event.memberBasedItems.forEach((item) => {
+      console.log(
+        `Añadiendo control para item basado en miembros id=${item.id}, nombre=${item.name}`,
+      );
+
+      // Crear un grupo para cada item con controles para matchCount y totalWithCharacteristic
+      const itemGroup = this.fb.group({
+        matchCount: [0, [Validators.required, Validators.min(0)]],
+        totalWithCharacteristic: [0, [Validators.required, Validators.min(0)]],
+      });
+
+      // Añadir el grupo al grupo principal de scores basados en miembros
+      memberBasedScoresGroup.addControl(item.id!.toString(), itemGroup);
+    });
+
+    this.scoringForm.setControl('memberBasedScores', memberBasedScoresGroup);
+    console.log(
+      'Formulario para items basados en miembros construido:',
+      this.scoringForm.value,
+    );
   }
 
   private loadEventResults(): void {
@@ -232,94 +307,87 @@ export class EventScoringComponent implements OnInit {
   }
 
   private populateFormWithExistingResult(): void {
-    if (!this.existingResult) {
-      console.log('No hay resultado existente para cargar');
-      return;
-    }
+    if (!this.existingResult || !this.scoringForm) return;
 
-    const scoresGroup = this.scoringForm.get('scores') as FormGroup;
+    console.log(
+      'Intentando cargar resultado existente al formulario:',
+      this.existingResult,
+    );
 
-    // Verificar si los datos vienen como 'scores' o como 'items'
-    let scoreData = this.existingResult.scores || [];
+    // Obtener el tipo de evento
+    const eventType = this.event?.type || 'REGULAR';
 
-    // Si no hay scores, intentar extraer la información de items directamente
-    if (scoreData.length === 0 && (this.existingResult as any).items) {
-      const items = (this.existingResult as any).items || [];
-      console.log('Intentando extraer datos directamente de items:', items);
-
-      // Mapear directamente la estructura del backend
-      scoreData = items.map((item: any) => ({
-        eventItemId: item.eventItem?.id || 0,
-        score: item.score,
-      }));
-    }
-
-    console.log('Datos de calificación procesados:', scoreData);
-
-    if (!scoreData || !Array.isArray(scoreData) || scoreData.length === 0) {
-      console.warn('No se encontraron datos de calificación válidos');
-      return;
-    }
-
-    // Obtener los IDs de controles disponibles en el formulario
-    const availableControls = Object.keys(scoresGroup.controls);
-    console.log('Controles disponibles en el formulario:', availableControls);
-
-    // Crear mapeo de puntuaciones por ID de item para facilitar búsqueda
-    const scoreMap = new Map();
-
-    // Almacenar las puntuaciones por ID de item (tanto string como number)
-    scoreData.forEach((item: any) => {
-      const eventItemId =
-        item.eventItemId !== undefined
-          ? item.eventItemId
-          : item.eventItem?.id !== undefined
-            ? item.eventItem.id
-            : null;
-
-      if (eventItemId !== null && item.score !== undefined) {
-        console.log(
-          `Mapeando calificación: itemId=${eventItemId}, score=${item.score}`,
-        );
-        scoreMap.set(eventItemId.toString(), item.score);
-        scoreMap.set(Number(eventItemId), item.score);
-      }
-    });
-
-    console.log('Mapa de puntuaciones:', [...scoreMap.entries()]);
-
-    // Aplicar los valores a los controles del formulario
-    availableControls.forEach((controlId) => {
-      const control = scoresGroup.get(controlId);
-      if (control) {
-        // Intentar obtener el valor usando el ID como string
-        if (scoreMap.has(controlId)) {
-          const score = scoreMap.get(controlId);
-          console.log(
-            `Estableciendo puntuación ${score} para item ${controlId} (string match)`,
-          );
-          control.setValue(score);
+    if (eventType === 'REGULAR') {
+      // Procesar los scores regulares
+      if (this.existingResult.scores && this.existingResult.scores.length > 0) {
+        const scoresGroup = this.scoringForm.get('scores') as FormGroup;
+        if (!scoresGroup) {
+          console.error('No se encontró el grupo de scores en el formulario');
+          return;
         }
-        // Intentar obtener el valor usando el ID como number
-        else if (scoreMap.has(Number(controlId))) {
-          const score = scoreMap.get(Number(controlId));
-          console.log(
-            `Estableciendo puntuación ${score} para item ${controlId} (number match)`,
-          );
-          control.setValue(score);
-        } else {
-          console.warn(`No se encontró puntuación para el item ${controlId}`);
-        }
+
+        // Procesar cada score
+        this.existingResult.scores.forEach((score) => {
+          const control = scoresGroup.get(score.eventItemId.toString());
+          if (control) {
+            console.log(
+              `Asignando valor ${score.score} al control del item ${score.eventItemId}`,
+            );
+            control.setValue(score.score);
+          } else {
+            console.warn(
+              `No se encontró el control para el item ${score.eventItemId}`,
+            );
+          }
+        });
+
+        // Recalcular el total
+        this.calculateTotalScore();
+      } else {
+        console.warn('No hay scores en el resultado existente');
       }
-    });
+    } else if (eventType === 'MEMBER_BASED') {
+      // Procesar los scores basados en miembros
+      if (
+        this.existingResult.memberBasedScores &&
+        this.existingResult.memberBasedScores.length > 0
+      ) {
+        const memberBasedScoresGroup = this.scoringForm.get(
+          'memberBasedScores',
+        ) as FormGroup;
+        if (!memberBasedScoresGroup) {
+          console.error(
+            'No se encontró el grupo de memberBasedScores en el formulario',
+          );
+          return;
+        }
 
-    // Verificar los valores del formulario después de poblar
-    console.log('Formulario después de poblar:', this.scoringForm.value);
+        // Procesar cada score basado en miembros
+        this.existingResult.memberBasedScores.forEach((score) => {
+          const itemGroup = memberBasedScoresGroup.get(
+            score.eventItemId.toString(),
+          );
+          if (itemGroup) {
+            console.log(
+              `Asignando valores matchCount=${score.matchCount}, totalWithCharacteristic=${score.totalWithCharacteristic} al item ${score.eventItemId}`,
+            );
+            itemGroup.get('matchCount')?.setValue(score.matchCount);
+            itemGroup
+              .get('totalWithCharacteristic')
+              ?.setValue(score.totalWithCharacteristic);
+          } else {
+            console.warn(
+              `No se encontró el grupo para el item basado en miembros ${score.eventItemId}`,
+            );
+          }
+        });
 
-    // Después de poblar el formulario, calcular la puntuación total
-    setTimeout(() => {
-      this.calculateTotalScore();
-    }, 0);
+        // Recalcular el total
+        this.calculateTotalScore();
+      } else {
+        console.warn('No hay memberBasedScores en el resultado existente');
+      }
+    }
   }
 
   private resetScores(): void {
@@ -342,9 +410,8 @@ export class EventScoringComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.scoringForm.invalid || !this.selectedClubId) {
-      // Mostrar error y salir
-      this.errorMessage = 'Por favor, complete correctamente todos los campos';
+    if (this.scoringForm.invalid) {
+      this.scoringForm.markAllAsTouched();
       return;
     }
 
@@ -352,117 +419,111 @@ export class EventScoringComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    // Extraer valores del formulario
-    const formValue = this.scoringForm.value;
-    console.log('Datos del formulario:', formValue);
+    // Obtener tipo de evento
+    const eventType = this.event?.type || 'REGULAR';
 
-    // Verificar que tengamos el evento correcto
-    if (!this.event || !this.event.id) {
-      this.errorMessage = 'Error: No se pudo obtener la información del evento';
+    // Obtener club y evento seleccionados
+    const clubId = this.scoringForm.get('clubId')?.value;
+    const eventId = this.eventId;
+
+    if (!clubId || !eventId) {
+      this.errorMessage =
+        'Debe seleccionar un club y un evento para calificar.';
       this.isLoading = false;
       return;
     }
 
-    // Asegurar que estamos enviando el ID del evento correcto (el de la ruta, no el almacenado en this.event)
-    const correctEventId = this.eventId;
-    console.log(
-      `[DEBUG] ID de evento de la ruta: ${correctEventId}, ID del evento cargado: ${this.event.id}`,
-    );
+    // Calcular puntuación total
+    const totalScore = this.calculateTotalScore();
 
-    if (correctEventId !== this.event.id) {
-      console.warn(
-        `[WARNING] Discrepancia entre el ID de evento de la ruta (${correctEventId}) y el evento cargado (${this.event.id})`,
-      );
-    }
-
-    // Construir el objeto de resultado
-    const scores: { eventItemId: number; score: number }[] = [];
-    const scoresControl = this.scoringForm.get('scores');
-
-    if (scoresControl && typeof scoresControl.value === 'object') {
-      // Detalle completo del formulario para depuración
-      console.log('[DEBUG] Formulario completo:', this.scoringForm);
-      console.log('[DEBUG] Controles de puntuación:', scoresControl);
-      console.log('[DEBUG] Todos los items del evento:', this.event?.items);
-
-      // Iterar cada control de puntuación
-      for (const [itemId, score] of Object.entries(scoresControl.value)) {
-        console.log(`[DEBUG] Procesando item ID=${itemId}, score=${score}`);
-
-        // Encontrar el item correspondiente en el evento para verificar
-        const eventItem = this.event?.items?.find(
-          (item) => item.id?.toString() === itemId,
-        );
-        console.log(`[DEBUG] Item encontrado en evento:`, eventItem);
-
-        if (!eventItem) {
-          console.error(
-            `[ERROR] No se encontró el item con ID ${itemId} en el evento ${this.event.id}`,
-          );
-          this.errorMessage = `Error: El ítem con ID ${itemId} no pertenece al evento seleccionado`;
-          this.isLoading = false;
-          return;
-        }
-
-        // Agregar al arreglo de puntuaciones solo si encontramos el item en el evento actual
-        scores.push({
-          eventItemId: Number(itemId),
-          score: Number(score as string | number),
-        });
-      }
-    }
-
-    console.log('[DEBUG] Array final de puntuaciones a enviar:', scores);
-
-    // Calcular puntuación total (asegurando que no sea void)
-    const totalScore = this.calculateTotalScore() || 0;
-
-    // Construir datos del resultado
+    // Preparar datos para enviar
     const resultData: Result = {
-      eventId: correctEventId, // Usar siempre el ID de evento de la ruta
-      clubId: this.selectedClubId!,
-      scores: scores,
-      totalScore: totalScore,
+      clubId,
+      eventId,
+      totalScore,
+      // Datos específicos según el tipo de evento
     };
 
-    // Actualizar o crear según corresponda
-    if (this.existingResult && this.existingResult.id) {
-      console.log(
-        `Actualizando resultado existente con ID ${this.existingResult.id}, eventId=${this.existingResult.eventId}`,
-      );
+    if (eventType === 'REGULAR') {
+      // Preparar scores regulares
+      const scoresGroup = this.scoringForm.get('scores') as FormGroup;
+      const scores: ResultScore[] = [];
 
+      if (scoresGroup) {
+        // Convertir el objeto de controles a un array de scores
+        Object.keys(scoresGroup.controls).forEach((itemId) => {
+          const control = scoresGroup.get(itemId);
+          if (control) {
+            scores.push({
+              eventItemId: +itemId,
+              score: parseFloat(control.value) || 0,
+            });
+          }
+        });
+      }
+
+      resultData.scores = scores;
+    } else if (eventType === 'MEMBER_BASED') {
+      // Preparar scores basados en miembros
+      const memberBasedScoresGroup = this.scoringForm.get(
+        'memberBasedScores',
+      ) as FormGroup;
+      const memberBasedScores: MemberBasedResultScore[] = [];
+
+      if (memberBasedScoresGroup) {
+        // Convertir el objeto de controles a un array de memberBasedScores
+        Object.keys(memberBasedScoresGroup.controls).forEach((itemId) => {
+          const itemGroup = memberBasedScoresGroup.get(itemId) as FormGroup;
+          if (itemGroup) {
+            memberBasedScores.push({
+              eventItemId: +itemId,
+              matchCount: parseFloat(itemGroup.get('matchCount')?.value) || 0,
+              totalWithCharacteristic:
+                parseFloat(itemGroup.get('totalWithCharacteristic')?.value) ||
+                0,
+            });
+          }
+        });
+      }
+
+      resultData.memberBasedScores = memberBasedScores;
+    }
+
+    console.log('Enviando datos de calificación:', resultData);
+
+    // Si ya existe un resultado, actualizarlo; de lo contrario, crear uno nuevo
+    if (this.existingResult && this.existingResult.id) {
       this.resultService
         .updateResult(this.existingResult.id, resultData)
         .subscribe({
           next: (result) => {
-            console.log('Resultado actualizado correctamente:', result);
-            this.successMessage = 'Puntuación actualizada correctamente';
+            this.successMessage = 'Calificación actualizada correctamente.';
+            this.existingResult = result;
             this.isLoading = false;
-            this.loadEventResults(); // Recargar resultados
+
+            // Recargar los resultados para actualizar el ranking
+            this.loadEventResults();
           },
           error: (error) => {
-            console.error('Error al actualizar resultado:', error);
-            this.errorMessage = `Error al actualizar la puntuación: ${
-              error.error?.message || error.message || 'Error desconocido'
+            this.errorMessage = `Error al actualizar calificación: ${
+              error.error?.message || error.message || error
             }`;
             this.isLoading = false;
           },
         });
     } else {
-      console.log('Creando nuevo resultado');
-
       this.resultService.createResult(resultData).subscribe({
         next: (result) => {
-          console.log('Resultado creado correctamente:', result);
-          this.successMessage = 'Puntuación guardada correctamente';
+          this.successMessage = 'Calificación registrada correctamente.';
+          this.existingResult = result;
           this.isLoading = false;
-          this.existingResult = result; // Guardar el resultado para futuras actualizaciones
-          this.loadEventResults(); // Recargar resultados
+
+          // Recargar los resultados para actualizar el ranking
+          this.loadEventResults();
         },
         error: (error) => {
-          console.error('Error al crear resultado:', error);
-          this.errorMessage = `Error al guardar la puntuación: ${
-            error.error?.message || error.message || 'Error desconocido'
+          this.errorMessage = `Error al registrar calificación: ${
+            error.error?.message || error.message || error
           }`;
           this.isLoading = false;
         },
@@ -484,42 +545,101 @@ export class EventScoringComponent implements OnInit {
 
   // Método para calcular la puntuación total
   calculateTotalScore(): number {
-    if (!this.event || !this.event.items || this.event.items.length === 0) {
-      this.totalScore = 0;
-      return 0;
-    }
+    // Inicializar puntuación total
+    let total = 0;
 
-    const scoresGroup = this.scoringForm.get('scores') as FormGroup;
-    if (!scoresGroup) {
-      this.totalScore = 0;
-      return 0;
-    }
+    // Obtener el tipo de evento
+    const eventType = this.event?.type || 'REGULAR';
 
-    let totalScore = 0;
-    let totalPercentage = 0;
+    if (eventType === 'REGULAR') {
+      // Calcular para eventos regulares
+      if (
+        this.event?.items &&
+        this.event.items.length > 0 &&
+        this.scoringForm
+      ) {
+        const scoresGroup = this.scoringForm.get('scores') as FormGroup;
+        if (!scoresGroup) {
+          console.warn('No se encontró el grupo de scores en el formulario');
+          return 0;
+        }
 
-    // Iterar sobre cada ítem del evento
-    this.event.items.forEach((item) => {
-      if (item.id && item.percentage) {
-        const control = scoresGroup.get(item.id.toString());
-        if (control && control.value !== null && control.value !== undefined) {
-          // Calcular puntuación ponderada (calificación * porcentaje)
-          const score = parseFloat(control.value);
-          const percentage = item.percentage / 100; // Convertir porcentaje a decimal
-          totalScore += score * percentage;
-          totalPercentage += percentage;
+        for (const item of this.event.items) {
+          if (item.id) {
+            const control = scoresGroup.get(item.id.toString());
+            if (control) {
+              const score = parseFloat(control.value) || 0;
+              const percentage = item.percentage || 0;
+              const weightedScore = (score * percentage) / 100;
+
+              console.log(
+                `Item ${item.id} (${item.name}): Score=${score}, Peso=${percentage}%, Ponderado=${weightedScore}`,
+              );
+
+              total += weightedScore;
+            }
+          }
         }
       }
-    });
+    } else if (eventType === 'MEMBER_BASED') {
+      // Calcular para eventos basados en miembros
+      if (
+        this.event?.memberBasedItems &&
+        this.event.memberBasedItems.length > 0 &&
+        this.scoringForm
+      ) {
+        const memberBasedScoresGroup = this.scoringForm.get(
+          'memberBasedScores',
+        ) as FormGroup;
 
-    // Normalizar si es necesario (en caso de que los porcentajes no sumen 100%)
-    if (totalPercentage > 0 && Math.abs(totalPercentage - 1) > 0.01) {
-      totalScore = totalScore / totalPercentage;
+        if (!memberBasedScoresGroup) {
+          console.warn(
+            'No se encontró el grupo de memberBasedScores en el formulario',
+          );
+          return 0;
+        }
+
+        for (const item of this.event.memberBasedItems) {
+          if (item.id) {
+            const itemGroup = memberBasedScoresGroup.get(item.id.toString());
+
+            if (itemGroup) {
+              const matchCount =
+                parseFloat(itemGroup.get('matchCount')?.value) || 0;
+              const totalWithChar =
+                parseFloat(itemGroup.get('totalWithCharacteristic')?.value) ||
+                0;
+
+              // Evitar división por cero
+              let proportion = 0;
+              if (totalWithChar > 0) {
+                proportion = matchCount / totalWithChar;
+              }
+
+              // Escala a 0-10
+              const score = proportion * 10;
+              const percentage = item.percentage || 0;
+              const weightedScore = (score * percentage) / 100;
+
+              console.log(
+                `Item ${item.id} (${item.name}): MatchCount=${matchCount}, Total=${totalWithChar}, Proporción=${proportion}, Score=${score}, Peso=${percentage}%, Ponderado=${weightedScore}`,
+              );
+
+              total += weightedScore;
+            }
+          }
+        }
+      }
     }
 
-    this.totalScore = totalScore;
-    console.log('Puntuación total calculada:', this.totalScore);
-    return totalScore;
+    // Redondear a 2 decimales
+    total = parseFloat(total.toFixed(2));
+    console.log(`Puntuación total calculada: ${total}`);
+
+    // Actualizar propiedad para mostrar en UI
+    this.totalScore = total;
+
+    return total;
   }
 
   // Método para obtener el sufijo del ranking (1st, 2nd, 3rd, etc.)
@@ -547,5 +667,36 @@ export class EventScoringComponent implements OnInit {
       'bg-info': rank === 3,
       'bg-secondary': rank > 3,
     };
+  }
+
+  getItemPercentage(itemId: number | undefined): number {
+    if (!itemId) {
+      return 0;
+    }
+
+    const memberBasedScoresGroup = this.scoringForm.get(
+      'memberBasedScores',
+    ) as FormGroup;
+    if (!memberBasedScoresGroup) {
+      return 0;
+    }
+
+    const itemGroup = memberBasedScoresGroup.get(
+      itemId.toString(),
+    ) as FormGroup;
+    if (!itemGroup) {
+      return 0;
+    }
+
+    const matchCount = parseFloat(itemGroup.get('matchCount')?.value) || 0;
+    const totalWithChar =
+      parseFloat(itemGroup.get('totalWithCharacteristic')?.value) || 0;
+
+    if (totalWithChar === 0) {
+      return 0;
+    }
+
+    const percentage = (matchCount / totalWithChar) * 100;
+    return Math.round(percentage);
   }
 }

@@ -66,11 +66,11 @@
             </div>
           </div>
 
-          <!-- Formulario de calificación -->
+          <!-- Formulario de calificación para eventos regulares -->
           <div
             class="card mb-4"
             *ngIf="
-              selectedClubId && event && event.items && event.items.length > 0
+              selectedClubId && event && event.type === 'REGULAR' && event.items && event.items.length > 0
             "
           >
             <div class="card-header">
@@ -153,11 +153,136 @@
             </div>
           </div>
 
+          <!-- Formulario de calificación para eventos basados en miembros -->
+          <div
+            class="card mb-4"
+            *ngIf="
+              selectedClubId && event && event.type === 'MEMBER_BASED' && event.memberBasedItems && event.memberBasedItems.length > 0
+            "
+          >
+            <div class="card-header">
+              <h5 class="mb-0">
+                Calificaciones Basadas en Características de Miembros
+                <span *ngIf="existingResult" class="badge bg-info ms-2"
+                  >Ya calificado</span
+                >
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info" *ngIf="existingResult">
+                Este club ya tiene calificaciones para este evento. Al guardar,
+                actualizará las calificaciones existentes.
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-primary mt-2"
+                  (click)="reloadExistingScores()"
+                >
+                  Recargar calificaciones
+                </button>
+              </div>
+
+              <div class="alert alert-warning mb-4">
+                <h6>Instrucciones:</h6>
+                <ul class="mb-0">
+                  <li>Para cada ítem, indique el <strong>número de miembros que cumplen la característica</strong> y el <strong>total de miembros con esa característica</strong>.</li>
+                  <li>La calificación se calculará automáticamente como la proporción entre ambos valores.</li>
+                  <li>Por ejemplo, si hay 10 miembros bautizados y 7 de ellos traen su insignia, la calificación será 7/10 = 70%.</li>
+                </ul>
+              </div>
+
+              <div formGroupName="memberBasedScores">
+                <div class="row" *ngFor="let item of event?.memberBasedItems" class="mb-4 pb-4 border-bottom">
+                  <div class="col-12 mb-2">
+                    <h5>{{ item.name }} <small class="text-muted">({{ item.percentage }}%)</small></h5>
+                    <div class="text-muted mb-2">
+                      <small>Características aplicables: {{ item.applicableCharacteristics?.join(', ') }}</small>
+                    </div>
+                  </div>
+
+                  <div [formGroupName]="item.id !== undefined ? item.id.toString() : ''" class="col-12">
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Miembros que cumplen la característica</label>
+                        <input
+                          type="number"
+                          class="form-control"
+                          formControlName="matchCount"
+                          min="0"
+                          step="1"
+                          [class.is-invalid]="
+                            item.id !== undefined &&
+                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('matchCount')?.invalid &&
+                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('matchCount')?.touched
+                          "
+                          (input)="calculateTotalScore()"
+                        />
+                        <div class="invalid-feedback">
+                          Debe ser un número mayor o igual a 0.
+                        </div>
+                      </div>
+
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Total de miembros con la característica</label>
+                        <input
+                          type="number"
+                          class="form-control"
+                          formControlName="totalWithCharacteristic"
+                          min="0"
+                          step="1"
+                          [class.is-invalid]="
+                            item.id !== undefined &&
+                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.invalid &&
+                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.touched
+                          "
+                          (input)="calculateTotalScore()"
+                        />
+                        <div class="invalid-feedback">
+                          Debe ser un número mayor o igual a 0.
+                        </div>
+                      </div>
+
+                      <div class="col-12">
+                        <div class="progress" style="height: 25px;">
+                          <div 
+                            class="progress-bar" 
+                            role="progressbar" 
+                            [ngStyle]="{
+                              width: getItemPercentage(item.id) + '%'
+                            }"
+                            [attr.aria-valuenow]="getItemPercentage(item.id)" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100"
+                          >
+                            {{ getItemPercentage(item.id) }}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row mt-4">
+                  <div class="col-12">
+                    <div class="card bg-light">
+                      <div class="card-body">
+                        <h5 class="card-title">Puntuación Total</h5>
+                        <h2 class="display-6 text-primary">{{ totalScore | number: '1.1-1' }}</h2>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Botones de acción -->
           <div
             class="d-flex justify-content-end gap-2 mb-4"
             *ngIf="
-              selectedClubId && event && event.items && event.items.length > 0
+              selectedClubId && event && (
+                (event.type === 'REGULAR' && event.items && event.items.length > 0) || 
+                (event.type === 'MEMBER_BASED' && event.memberBasedItems && event.memberBasedItems.length > 0)
+              )
             "
           >
             <button type="button" class="btn btn-secondary" (click)="goBack()">

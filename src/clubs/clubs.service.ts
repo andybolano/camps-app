@@ -44,20 +44,22 @@ export class ClubsService {
   }
 
   async findAll(): Promise<Club[]> {
-    return this.clubsRepository.find({ relations: ['camp'] });
+    return this.clubsRepository.find({
+      relations: ['camp', 'memberCharacteristics'],
+    });
   }
 
   async findByCamp(campId: number): Promise<Club[]> {
     return this.clubsRepository.find({
       where: { camp: { id: campId } },
-      relations: ['camp'],
+      relations: ['camp', 'memberCharacteristics'],
     });
   }
 
   async findOne(id: number): Promise<Club> {
     const club = await this.clubsRepository.findOne({
       where: { id },
-      relations: ['camp', 'results'],
+      relations: ['camp', 'results', 'memberCharacteristics'],
     });
 
     if (!club) {

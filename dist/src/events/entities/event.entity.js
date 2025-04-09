@@ -14,6 +14,7 @@ const typeorm_1 = require("typeorm");
 const camp_entity_1 = require("../../camps/entities/camp.entity");
 const event_item_entity_1 = require("./event-item.entity");
 const result_entity_1 = require("../../results/entities/result.entity");
+const member_based_event_item_entity_1 = require("./member-based-event-item.entity");
 let Event = class Event {
 };
 exports.Event = Event;
@@ -30,6 +31,10 @@ __decorate([
     __metadata("design:type", String)
 ], Event.prototype, "description", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 'REGULAR' }),
+    __metadata("design:type", String)
+], Event.prototype, "type", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => camp_entity_1.Camp, (camp) => camp.events),
     __metadata("design:type", camp_entity_1.Camp)
 ], Event.prototype, "camp", void 0);
@@ -37,6 +42,12 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => event_item_entity_1.EventItem, (item) => item.event, { cascade: true }),
     __metadata("design:type", Array)
 ], Event.prototype, "items", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => member_based_event_item_entity_1.MemberBasedEventItem, (item) => item.event, {
+        cascade: true,
+    }),
+    __metadata("design:type", Array)
+], Event.prototype, "memberBasedItems", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => result_entity_1.Result, (result) => result.event),
     __metadata("design:type", Array)

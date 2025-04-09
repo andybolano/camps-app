@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Event } from './entities/event.entity';
 import { EventItem } from './entities/event-item.entity';
+import { MemberBasedEventItem } from './entities/member-based-event-item.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { CampsService } from '../camps/camps.service';
@@ -21,6 +22,8 @@ export class EventsService {
     private eventsRepository: Repository<Event>,
     @InjectRepository(EventItem)
     private eventItemsRepository: Repository<EventItem>,
+    @InjectRepository(MemberBasedEventItem)
+    private memberBasedEventItemsRepository: Repository<MemberBasedEventItem>,
     private campsService: CampsService,
     @Inject(forwardRef(() => ResultsService))
     private resultsService: ResultsService,
@@ -44,7 +47,7 @@ export class EventsService {
   }
 
   async create(createEventDto: CreateEventDto): Promise<Event> {
-    const { campId, items, ...eventData } = createEventDto;
+    const { campId, items, memberBasedItems, ...eventData } = createEventDto;
 
     // Find the referenced camp
     const camp = await this.campsService.findOne(campId);
@@ -58,36 +61,50 @@ export class EventsService {
     // Save the event first to get an ID
     await this.eventsRepository.save(event);
 
-    // Create and save event items
-    const eventItems = items.map((item) =>
-      this.eventItemsRepository.create({
-        ...item,
-        event,
-      }),
-    );
+    // Create and save event items if they exist
+    if (items && items.length > 0) {
+      const eventItems = items.map((item) =>
+        this.eventItemsRepository.create({
+          ...item,
+          event,
+        }),
+      );
+      event.items = await this.eventItemsRepository.save(eventItems);
+    }
 
-    event.items = await this.eventItemsRepository.save(eventItems);
+    // Create and save member-based event items if they exist
+    if (memberBasedItems && memberBasedItems.length > 0) {
+      const memberBasedEventItems = memberBasedItems.map((item) =>
+        this.memberBasedEventItemsRepository.create({
+          ...item,
+          event,
+        }),
+      );
+      event.memberBasedItems = await this.memberBasedEventItemsRepository.save(
+        memberBasedEventItems,
+      );
+    }
 
     return event;
   }
 
   async findAll(): Promise<Event[]> {
     return this.eventsRepository.find({
-      relations: ['camp', 'items'],
+      relations: ['camp', 'items', 'memberBasedItems'],
     });
   }
 
   async findByCamp(campId: number): Promise<Event[]> {
     return this.eventsRepository.find({
       where: { camp: { id: campId } },
-      relations: ['camp', 'items'],
+      relations: ['camp', 'items', 'memberBasedItems'],
     });
   }
 
   async findOne(id: number): Promise<Event> {
     const event = await this.eventsRepository.findOne({
       where: { id },
-      relations: ['camp', 'items', 'results'],
+      relations: ['camp', 'items', 'memberBasedItems', 'results'],
     });
 
     if (!event) {
@@ -103,7 +120,18 @@ export class EventsService {
     // Verificar si el evento tiene calificaciones
     const hasScores = await this.eventHasScores(id);
 
-    // Handle items update if provided
+    // Updated general event properties
+    if (updateEventDto.name !== undefined) {
+      event.name = updateEventDto.name;
+    }
+    if (updateEventDto.description !== undefined) {
+      event.description = updateEventDto.description;
+    }
+    if (updateEventDto.type !== undefined) {
+      event.type = updateEventDto.type;
+    }
+
+    // Handle regular items update if provided
     if (updateEventDto.items) {
       // Instead of deleting all items, find which ones we need to keep
       // Get existing event items with their IDs and verify they're properly loaded
@@ -260,35 +288,126 @@ export class EventsService {
       }
     }
 
-    // Si tiene calificaciones y se intenta cambiar datos básicos del evento
-    if (hasScores) {
-      // Solo permitir que se actualicen items, pero no otros campos
-      if (
-        (updateEventDto.name && updateEventDto.name !== event.name) ||
-        (updateEventDto.description &&
-          updateEventDto.description !== event.description) ||
-        updateEventDto.campId
-      ) {
-        throw new BadRequestException(
-          'No se pueden modificar los datos básicos del evento porque ya tiene calificaciones registradas.',
-        );
-      }
-    } else {
-      // Si no hay calificaciones, permitir actualizar todos los campos
-      // Handle camp update if campId is provided
-      if (updateEventDto.campId) {
-        const camp = await this.campsService.findOne(updateEventDto.campId);
-        event.camp = camp;
-      }
+    // Handle member-based items update if provided
+    if (updateEventDto.memberBasedItems) {
+      // Get existing member-based event items
+      const existingMemberBasedItems =
+        await this.memberBasedEventItemsRepository.find({
+          where: { event: { id } },
+          relations: ['event'],
+        });
 
-      // Update basic event properties
-      const eventData = { ...updateEventDto };
-      delete eventData.campId;
-      delete eventData.items;
-      Object.assign(event, eventData);
+      // Create a map of items from the DTO with their IDs (if they have one)
+      const updatedMemberBasedItemsMap = new Map();
+      updateEventDto.memberBasedItems.forEach((item) => {
+        if (item.id) {
+          updatedMemberBasedItemsMap.set(item.id, item);
+        }
+      });
+
+      // Items to delete (existing items not in the update)
+      const memberBasedItemsToDelete = existingMemberBasedItems.filter(
+        (item) => !updatedMemberBasedItemsMap.has(item.id),
+      );
+
+      // Items to update (existing items also in the update)
+      const memberBasedItemsToUpdate = existingMemberBasedItems.filter((item) =>
+        updatedMemberBasedItemsMap.has(item.id),
+      );
+
+      // Items to create (items in update without IDs or with IDs not in existing items)
+      const memberBasedItemsToCreate = updateEventDto.memberBasedItems.filter(
+        (item) =>
+          !item.id ||
+          !existingMemberBasedItems.some((existing) => existing.id === item.id),
+      );
+
+      try {
+        // Check similar validation as with regular items
+        if (hasScores) {
+          // Don't delete items if event has scores
+          if (memberBasedItemsToDelete.length > 0) {
+            throw new BadRequestException(
+              'No se pueden actualizar los ítems de calificación porque este evento ya tiene calificaciones registradas.',
+            );
+          }
+
+          // Check if we're trying to modify items with scores
+          for (const item of memberBasedItemsToUpdate) {
+            const updateData = updatedMemberBasedItemsMap.get(item.id);
+            const itemHasScores = await this.eventItemHasScores(item.id);
+
+            if (itemHasScores) {
+              // Check if name or percentage is changing
+              if (
+                (updateData.name && updateData.name !== item.name) ||
+                (updateData.percentage !== undefined &&
+                  updateData.percentage !== item.percentage)
+              ) {
+                throw new BadRequestException(
+                  `No se puede modificar el ítem "${item.name}" porque ya tiene calificaciones asociadas.`,
+                );
+              }
+            }
+          }
+        } else {
+          // If no scores, proceed with deletions
+          if (memberBasedItemsToDelete.length > 0) {
+            const idsToDelete = memberBasedItemsToDelete.map((item) => item.id);
+            // Delete ResultItems if needed
+            for (const item of memberBasedItemsToDelete) {
+              await this.resultsService.deleteResultItemsByEventItem(item.id);
+            }
+
+            // Delete the items
+            await this.memberBasedEventItemsRepository.delete(idsToDelete);
+          }
+        }
+
+        // Update existing items
+        for (const item of memberBasedItemsToUpdate) {
+          const updateData = updatedMemberBasedItemsMap.get(item.id);
+          await this.memberBasedEventItemsRepository.update(
+            item.id,
+            updateData,
+          );
+        }
+
+        // Create new items
+        if (memberBasedItemsToCreate.length > 0) {
+          try {
+            const newItems = memberBasedItemsToCreate.map((item) => {
+              return this.memberBasedEventItemsRepository.create({
+                name: item.name,
+                percentage: item.percentage,
+                applicableCharacteristics: item.applicableCharacteristics,
+                calculationType: item.calculationType || 'PROPORTION',
+                isRequired: item.isRequired || false,
+                event: event,
+              });
+            });
+
+            await this.memberBasedEventItemsRepository.save(newItems);
+          } catch (error) {
+            console.error('Error creating new member-based items:', error);
+            throw new Error('Failed to create new member-based event items');
+          }
+        }
+      } catch (error) {
+        if (error instanceof BadRequestException) {
+          throw error;
+        } else {
+          console.error('Error updating event member-based items:', error);
+          throw new Error('Error al actualizar los ítems del evento');
+        }
+      }
     }
 
-    return this.eventsRepository.save(event);
+    // Save the updated event
+    await this.eventsRepository.save(event);
+
+    // Return the updated event with all relations
+    return this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {

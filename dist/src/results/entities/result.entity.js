@@ -13,6 +13,7 @@ exports.Result = void 0;
 const typeorm_1 = require("typeorm");
 const club_entity_1 = require("../../clubs/entities/club.entity");
 const result_item_entity_1 = require("./result-item.entity");
+const result_member_based_item_entity_1 = require("./result-member-based-item.entity");
 let Result = class Result {
 };
 exports.Result = Result;
@@ -38,6 +39,12 @@ __decorate([
     }),
     __metadata("design:type", Array)
 ], Result.prototype, "items", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => result_member_based_item_entity_1.ResultMemberBasedItem, (resultMemberBasedItem) => resultMemberBasedItem.result, {
+        cascade: true,
+    }),
+    __metadata("design:type", Array)
+], Result.prototype, "memberBasedItems", void 0);
 exports.Result = Result = __decorate([
     (0, typeorm_1.Entity)()
 ], Result);

@@ -9,12 +9,20 @@ export interface ResultScore {
   score: number;
 }
 
+export interface MemberBasedResultScore {
+  eventItemId: number;
+  matchCount: number;
+  totalWithCharacteristic: number;
+}
+
 export interface Result {
   id?: number;
   eventId: number;
   clubId: number;
   scores?: ResultScore[];
   items?: ResultScore[]; // Para compatibilidad con el backend
+  memberBasedScores?: MemberBasedResultScore[];
+  memberBasedItems?: MemberBasedResultScore[]; // Para compatibilidad con el backend
   totalScore?: number;
   rank?: number; // Posición en el ranking
   club?: {
@@ -26,6 +34,7 @@ export interface Result {
     name: string;
     date?: string;
     description?: string;
+    type?: 'REGULAR' | 'MEMBER_BASED';
   };
 }
 
@@ -63,11 +72,12 @@ export class ResultService {
 
   // Crear nuevo resultado
   createResult(result: Result): Observable<Result> {
-    // Adaptar el formato para el backend (scores -> items)
+    // Adaptar el formato para el backend (scores -> items, memberBasedScores -> memberBasedItems)
     const backendFormat = {
       clubId: result.clubId,
       eventId: result.eventId,
       items: result.scores,
+      memberBasedItems: result.memberBasedScores,
       totalScore: result.totalScore, // Enviar la puntuación total calculada
     };
 
@@ -77,11 +87,12 @@ export class ResultService {
 
   // Actualizar resultado existente
   updateResult(id: number, result: Omit<Result, 'id'>): Observable<Result> {
-    // Adaptar el formato para el backend (scores -> items)
+    // Adaptar el formato para el backend (scores -> items, memberBasedScores -> memberBasedItems)
     const backendFormat = {
       clubId: result.clubId,
       eventId: result.eventId,
       items: result.scores,
+      memberBasedItems: result.memberBasedScores,
       totalScore: result.totalScore, // Enviar la puntuación total calculada
     };
 
@@ -94,7 +105,7 @@ export class ResultService {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 
-  // Función para normalizar un resultado (asegurar que tenga scores)
+  // Función para normalizar un resultado (asegurar que tenga scores y memberBasedScores)
   private normalizeResult(result: Result): Result {
     console.log('Normalizando resultado del backend:', result);
     if (result) {
@@ -106,11 +117,11 @@ export class ResultService {
         result.eventId = result.event.id;
       }
 
+      // Normalizar items regulares
       if ((result as any).items && !result.scores) {
         console.log('Estructura de items del backend:', (result as any).items);
 
         // Convertir la estructura de items del backend al formato esperado por el frontend
-        // y verificar que los items pertenezcan al evento correcto
         const eventId = result.eventId || (result as any).event?.id;
 
         result.scores = ((result as any).items || [])
@@ -135,6 +146,42 @@ export class ResultService {
         console.log(
           'Items convertidos a scores (después de filtrar):',
           result.scores,
+        );
+      }
+
+      // Normalizar memberBasedItems
+      if ((result as any).memberBasedItems && !result.memberBasedScores) {
+        console.log(
+          'Estructura de memberBasedItems del backend:',
+          (result as any).memberBasedItems,
+        );
+
+        // Convertir la estructura de memberBasedItems del backend al formato esperado por el frontend
+        const eventId = result.eventId || (result as any).event?.id;
+
+        result.memberBasedScores = ((result as any).memberBasedItems || [])
+          .filter((item: any) => {
+            // Verificar que el eventItem exista y que pertenezca al evento correcto
+            const itemEventId = item.eventItem?.event?.id;
+            if (itemEventId && eventId && itemEventId !== eventId) {
+              console.warn(
+                `[WARNING] MemberBasedItem ${item.eventItem?.id} pertenece al evento ${itemEventId}, pero el resultado es del evento ${eventId}`,
+              );
+              return false; // Filtrar este item
+            }
+            return true; // Mantener este item
+          })
+          .map((item: any) => {
+            return {
+              eventItemId: item.eventItem?.id || 0,
+              matchCount: item.matchCount,
+              totalWithCharacteristic: item.totalWithCharacteristic,
+            };
+          });
+
+        console.log(
+          'MemberBasedItems convertidos a memberBasedScores (después de filtrar):',
+          result.memberBasedScores,
         );
       }
     }

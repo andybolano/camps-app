@@ -1,3 +1,4 @@
+import { CreateMemberCharacteristicDto } from './create-member-characteristic.dto';
 export declare class CreateClubDto {
     name: string;
     city: string;
@@ -10,4 +11,5 @@ export declare class CreateClubDto {
     isPaid?: boolean;
     shieldUrl?: string;
     campId: number;
+    memberCharacteristics?: CreateMemberCharacteristicDto[];
 }

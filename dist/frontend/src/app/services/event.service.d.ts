@@ -4,6 +4,7 @@ export interface Event {
     id: number;
     name: string;
     description: string;
+    type?: 'REGULAR' | 'MEMBER_BASED';
     date?: string;
     camp: {
         id: number;
@@ -13,6 +14,14 @@ export interface Event {
         id?: number;
         name: string;
         percentage: number;
+    }[];
+    memberBasedItems?: {
+        id?: number;
+        name: string;
+        percentage: number;
+        applicableCharacteristics: string[];
+        calculationType?: string;
+        isRequired?: boolean;
     }[];
 }
 export declare class EventService {

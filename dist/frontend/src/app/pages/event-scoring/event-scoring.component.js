@@ -109,11 +109,27 @@ let EventScoringComponent = class EventScoringComponent {
         });
     }
     buildScoresForm() {
-        if (!this.event || !this.event.items || this.event.items.length === 0) {
-            console.warn('No hay items para construir el formulario');
+        if (!this.event) {
+            console.warn('No hay evento para construir el formulario');
             return;
         }
-        console.log('Construyendo formulario con items:', this.event.items);
+        console.log('Tipo de evento:', this.event.type);
+        if (this.event.type === 'REGULAR') {
+            this.buildRegularScoresForm();
+        }
+        else if (this.event.type === 'MEMBER_BASED') {
+            this.buildMemberBasedScoresForm();
+        }
+        else {
+            console.warn(`Tipo de evento desconocido: ${this.event.type}`);
+        }
+    }
+    buildRegularScoresForm() {
+        if (!this.event || !this.event.items || this.event.items.length === 0) {
+            console.warn('No hay items regulares para construir el formulario');
+            return;
+        }
+        console.log('Construyendo formulario con items regulares:', this.event.items);
         const scoresGroup = this.fb.group({});
         this.event.items.forEach((item) => {
             console.log(`Añadiendo control para item id=${item.id}, nombre=${item.name}`);
@@ -124,7 +140,29 @@ let EventScoringComponent = class EventScoringComponent {
             ]));
         });
         this.scoringForm.setControl('scores', scoresGroup);
-        console.log('Formulario construido:', this.scoringForm.value);
+        console.log('Formulario para items regulares construido:', this.scoringForm.value);
+    }
+    buildMemberBasedScoresForm() {
+        if (!this.event ||
+            !this.event.memberBasedItems ||
+            this.event.memberBasedItems.length === 0) {
+            console.warn('No hay items basados en miembros para construir el formulario');
+            return;
+        }
+        console.log('Construyendo formulario con items basados en miembros:', this.event.memberBasedItems);
+        const scoresGroup = this.fb.group({});
+        this.scoringForm.setControl('scores', scoresGroup);
+        const memberBasedScoresGroup = this.fb.group({});
+        this.event.memberBasedItems.forEach((item) => {
+            console.log(`Añadiendo control para item basado en miembros id=${item.id}, nombre=${item.name}`);
+            const itemGroup = this.fb.group({
+                matchCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
+                totalWithCharacteristic: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
+            });
+            memberBasedScoresGroup.addControl(item.id.toString(), itemGroup);
+        });
+        this.scoringForm.setControl('memberBasedScores', memberBasedScoresGroup);
+        console.log('Formulario para items basados en miembros construido:', this.scoringForm.value);
     }
     loadEventResults() {
         if (!this.eventId)
@@ -187,63 +225,60 @@ let EventScoringComponent = class EventScoringComponent {
         });
     }
     populateFormWithExistingResult() {
-        if (!this.existingResult) {
-            console.log('No hay resultado existente para cargar');
+        if (!this.existingResult || !this.scoringForm)
             return;
-        }
-        const scoresGroup = this.scoringForm.get('scores');
-        let scoreData = this.existingResult.scores || [];
-        if (scoreData.length === 0 && this.existingResult.items) {
-            const items = this.existingResult.items || [];
-            console.log('Intentando extraer datos directamente de items:', items);
-            scoreData = items.map((item) => ({
-                eventItemId: item.eventItem?.id || 0,
-                score: item.score,
-            }));
-        }
-        console.log('Datos de calificación procesados:', scoreData);
-        if (!scoreData || !Array.isArray(scoreData) || scoreData.length === 0) {
-            console.warn('No se encontraron datos de calificación válidos');
-            return;
-        }
-        const availableControls = Object.keys(scoresGroup.controls);
-        console.log('Controles disponibles en el formulario:', availableControls);
-        const scoreMap = new Map();
-        scoreData.forEach((item) => {
-            const eventItemId = item.eventItemId !== undefined
-                ? item.eventItemId
-                : item.eventItem?.id !== undefined
-                    ? item.eventItem.id
-                    : null;
-            if (eventItemId !== null && item.score !== undefined) {
-                console.log(`Mapeando calificación: itemId=${eventItemId}, score=${item.score}`);
-                scoreMap.set(eventItemId.toString(), item.score);
-                scoreMap.set(Number(eventItemId), item.score);
+        console.log('Intentando cargar resultado existente al formulario:', this.existingResult);
+        const eventType = this.event?.type || 'REGULAR';
+        if (eventType === 'REGULAR') {
+            if (this.existingResult.scores && this.existingResult.scores.length > 0) {
+                const scoresGroup = this.scoringForm.get('scores');
+                if (!scoresGroup) {
+                    console.error('No se encontró el grupo de scores en el formulario');
+                    return;
+                }
+                this.existingResult.scores.forEach((score) => {
+                    const control = scoresGroup.get(score.eventItemId.toString());
+                    if (control) {
+                        console.log(`Asignando valor ${score.score} al control del item ${score.eventItemId}`);
+                        control.setValue(score.score);
+                    }
+                    else {
+                        console.warn(`No se encontró el control para el item ${score.eventItemId}`);
+                    }
+                });
+                this.calculateTotalScore();
             }
-        });
-        console.log('Mapa de puntuaciones:', [...scoreMap.entries()]);
-        availableControls.forEach((controlId) => {
-            const control = scoresGroup.get(controlId);
-            if (control) {
-                if (scoreMap.has(controlId)) {
-                    const score = scoreMap.get(controlId);
-                    console.log(`Estableciendo puntuación ${score} para item ${controlId} (string match)`);
-                    control.setValue(score);
-                }
-                else if (scoreMap.has(Number(controlId))) {
-                    const score = scoreMap.get(Number(controlId));
-                    console.log(`Estableciendo puntuación ${score} para item ${controlId} (number match)`);
-                    control.setValue(score);
-                }
-                else {
-                    console.warn(`No se encontró puntuación para el item ${controlId}`);
-                }
+            else {
+                console.warn('No hay scores en el resultado existente');
             }
-        });
-        console.log('Formulario después de poblar:', this.scoringForm.value);
-        setTimeout(() => {
-            this.calculateTotalScore();
-        }, 0);
+        }
+        else if (eventType === 'MEMBER_BASED') {
+            if (this.existingResult.memberBasedScores &&
+                this.existingResult.memberBasedScores.length > 0) {
+                const memberBasedScoresGroup = this.scoringForm.get('memberBasedScores');
+                if (!memberBasedScoresGroup) {
+                    console.error('No se encontró el grupo de memberBasedScores en el formulario');
+                    return;
+                }
+                this.existingResult.memberBasedScores.forEach((score) => {
+                    const itemGroup = memberBasedScoresGroup.get(score.eventItemId.toString());
+                    if (itemGroup) {
+                        console.log(`Asignando valores matchCount=${score.matchCount}, totalWithCharacteristic=${score.totalWithCharacteristic} al item ${score.eventItemId}`);
+                        itemGroup.get('matchCount')?.setValue(score.matchCount);
+                        itemGroup
+                            .get('totalWithCharacteristic')
+                            ?.setValue(score.totalWithCharacteristic);
+                    }
+                    else {
+                        console.warn(`No se encontró el grupo para el item basado en miembros ${score.eventItemId}`);
+                    }
+                });
+                this.calculateTotalScore();
+            }
+            else {
+                console.warn('No hay memberBasedScores en el resultado existente');
+            }
+        }
     }
     resetScores() {
         if (!this.event || !this.event.items) {
@@ -259,86 +294,89 @@ let EventScoringComponent = class EventScoringComponent {
         this.totalScore = 0;
     }
     onSubmit() {
-        if (this.scoringForm.invalid || !this.selectedClubId) {
-            this.errorMessage = 'Por favor, complete correctamente todos los campos';
+        if (this.scoringForm.invalid) {
+            this.scoringForm.markAllAsTouched();
             return;
         }
         this.isLoading = true;
         this.errorMessage = '';
         this.successMessage = '';
-        const formValue = this.scoringForm.value;
-        console.log('Datos del formulario:', formValue);
-        if (!this.event || !this.event.id) {
-            this.errorMessage = 'Error: No se pudo obtener la información del evento';
+        const eventType = this.event?.type || 'REGULAR';
+        const clubId = this.scoringForm.get('clubId')?.value;
+        const eventId = this.eventId;
+        if (!clubId || !eventId) {
+            this.errorMessage =
+                'Debe seleccionar un club y un evento para calificar.';
             this.isLoading = false;
             return;
         }
-        const correctEventId = this.eventId;
-        console.log(`[DEBUG] ID de evento de la ruta: ${correctEventId}, ID del evento cargado: ${this.event.id}`);
-        if (correctEventId !== this.event.id) {
-            console.warn(`[WARNING] Discrepancia entre el ID de evento de la ruta (${correctEventId}) y el evento cargado (${this.event.id})`);
-        }
-        const scores = [];
-        const scoresControl = this.scoringForm.get('scores');
-        if (scoresControl && typeof scoresControl.value === 'object') {
-            console.log('[DEBUG] Formulario completo:', this.scoringForm);
-            console.log('[DEBUG] Controles de puntuación:', scoresControl);
-            console.log('[DEBUG] Todos los items del evento:', this.event?.items);
-            for (const [itemId, score] of Object.entries(scoresControl.value)) {
-                console.log(`[DEBUG] Procesando item ID=${itemId}, score=${score}`);
-                const eventItem = this.event?.items?.find((item) => item.id?.toString() === itemId);
-                console.log(`[DEBUG] Item encontrado en evento:`, eventItem);
-                if (!eventItem) {
-                    console.error(`[ERROR] No se encontró el item con ID ${itemId} en el evento ${this.event.id}`);
-                    this.errorMessage = `Error: El ítem con ID ${itemId} no pertenece al evento seleccionado`;
-                    this.isLoading = false;
-                    return;
-                }
-                scores.push({
-                    eventItemId: Number(itemId),
-                    score: Number(score),
+        const totalScore = this.calculateTotalScore();
+        const resultData = {
+            clubId,
+            eventId,
+            totalScore,
+        };
+        if (eventType === 'REGULAR') {
+            const scoresGroup = this.scoringForm.get('scores');
+            const scores = [];
+            if (scoresGroup) {
+                Object.keys(scoresGroup.controls).forEach((itemId) => {
+                    const control = scoresGroup.get(itemId);
+                    if (control) {
+                        scores.push({
+                            eventItemId: +itemId,
+                            score: parseFloat(control.value) || 0,
+                        });
+                    }
                 });
             }
+            resultData.scores = scores;
         }
-        console.log('[DEBUG] Array final de puntuaciones a enviar:', scores);
-        const totalScore = this.calculateTotalScore() || 0;
-        const resultData = {
-            eventId: correctEventId,
-            clubId: this.selectedClubId,
-            scores: scores,
-            totalScore: totalScore,
-        };
+        else if (eventType === 'MEMBER_BASED') {
+            const memberBasedScoresGroup = this.scoringForm.get('memberBasedScores');
+            const memberBasedScores = [];
+            if (memberBasedScoresGroup) {
+                Object.keys(memberBasedScoresGroup.controls).forEach((itemId) => {
+                    const itemGroup = memberBasedScoresGroup.get(itemId);
+                    if (itemGroup) {
+                        memberBasedScores.push({
+                            eventItemId: +itemId,
+                            matchCount: parseFloat(itemGroup.get('matchCount')?.value) || 0,
+                            totalWithCharacteristic: parseFloat(itemGroup.get('totalWithCharacteristic')?.value) ||
+                                0,
+                        });
+                    }
+                });
+            }
+            resultData.memberBasedScores = memberBasedScores;
+        }
+        console.log('Enviando datos de calificación:', resultData);
         if (this.existingResult && this.existingResult.id) {
-            console.log(`Actualizando resultado existente con ID ${this.existingResult.id}, eventId=${this.existingResult.eventId}`);
             this.resultService
                 .updateResult(this.existingResult.id, resultData)
                 .subscribe({
                 next: (result) => {
-                    console.log('Resultado actualizado correctamente:', result);
-                    this.successMessage = 'Puntuación actualizada correctamente';
+                    this.successMessage = 'Calificación actualizada correctamente.';
+                    this.existingResult = result;
                     this.isLoading = false;
                     this.loadEventResults();
                 },
                 error: (error) => {
-                    console.error('Error al actualizar resultado:', error);
-                    this.errorMessage = `Error al actualizar la puntuación: ${error.error?.message || error.message || 'Error desconocido'}`;
+                    this.errorMessage = `Error al actualizar calificación: ${error.error?.message || error.message || error}`;
                     this.isLoading = false;
                 },
             });
         }
         else {
-            console.log('Creando nuevo resultado');
             this.resultService.createResult(resultData).subscribe({
                 next: (result) => {
-                    console.log('Resultado creado correctamente:', result);
-                    this.successMessage = 'Puntuación guardada correctamente';
-                    this.isLoading = false;
+                    this.successMessage = 'Calificación registrada correctamente.';
                     this.existingResult = result;
+                    this.isLoading = false;
                     this.loadEventResults();
                 },
                 error: (error) => {
-                    console.error('Error al crear resultado:', error);
-                    this.errorMessage = `Error al guardar la puntuación: ${error.error?.message || error.message || 'Error desconocido'}`;
+                    this.errorMessage = `Error al registrar calificación: ${error.error?.message || error.message || error}`;
                     this.isLoading = false;
                 },
             });
@@ -354,34 +392,65 @@ let EventScoringComponent = class EventScoringComponent {
         }
     }
     calculateTotalScore() {
-        if (!this.event || !this.event.items || this.event.items.length === 0) {
-            this.totalScore = 0;
-            return 0;
-        }
-        const scoresGroup = this.scoringForm.get('scores');
-        if (!scoresGroup) {
-            this.totalScore = 0;
-            return 0;
-        }
-        let totalScore = 0;
-        let totalPercentage = 0;
-        this.event.items.forEach((item) => {
-            if (item.id && item.percentage) {
-                const control = scoresGroup.get(item.id.toString());
-                if (control && control.value !== null && control.value !== undefined) {
-                    const score = parseFloat(control.value);
-                    const percentage = item.percentage / 100;
-                    totalScore += score * percentage;
-                    totalPercentage += percentage;
+        let total = 0;
+        const eventType = this.event?.type || 'REGULAR';
+        if (eventType === 'REGULAR') {
+            if (this.event?.items &&
+                this.event.items.length > 0 &&
+                this.scoringForm) {
+                const scoresGroup = this.scoringForm.get('scores');
+                if (!scoresGroup) {
+                    console.warn('No se encontró el grupo de scores en el formulario');
+                    return 0;
+                }
+                for (const item of this.event.items) {
+                    if (item.id) {
+                        const control = scoresGroup.get(item.id.toString());
+                        if (control) {
+                            const score = parseFloat(control.value) || 0;
+                            const percentage = item.percentage || 0;
+                            const weightedScore = (score * percentage) / 100;
+                            console.log(`Item ${item.id} (${item.name}): Score=${score}, Peso=${percentage}%, Ponderado=${weightedScore}`);
+                            total += weightedScore;
+                        }
+                    }
                 }
             }
-        });
-        if (totalPercentage > 0 && Math.abs(totalPercentage - 1) > 0.01) {
-            totalScore = totalScore / totalPercentage;
         }
-        this.totalScore = totalScore;
-        console.log('Puntuación total calculada:', this.totalScore);
-        return totalScore;
+        else if (eventType === 'MEMBER_BASED') {
+            if (this.event?.memberBasedItems &&
+                this.event.memberBasedItems.length > 0 &&
+                this.scoringForm) {
+                const memberBasedScoresGroup = this.scoringForm.get('memberBasedScores');
+                if (!memberBasedScoresGroup) {
+                    console.warn('No se encontró el grupo de memberBasedScores en el formulario');
+                    return 0;
+                }
+                for (const item of this.event.memberBasedItems) {
+                    if (item.id) {
+                        const itemGroup = memberBasedScoresGroup.get(item.id.toString());
+                        if (itemGroup) {
+                            const matchCount = parseFloat(itemGroup.get('matchCount')?.value) || 0;
+                            const totalWithChar = parseFloat(itemGroup.get('totalWithCharacteristic')?.value) ||
+                                0;
+                            let proportion = 0;
+                            if (totalWithChar > 0) {
+                                proportion = matchCount / totalWithChar;
+                            }
+                            const score = proportion * 10;
+                            const percentage = item.percentage || 0;
+                            const weightedScore = (score * percentage) / 100;
+                            console.log(`Item ${item.id} (${item.name}): MatchCount=${matchCount}, Total=${totalWithChar}, Proporción=${proportion}, Score=${score}, Peso=${percentage}%, Ponderado=${weightedScore}`);
+                            total += weightedScore;
+                        }
+                    }
+                }
+            }
+        }
+        total = parseFloat(total.toFixed(2));
+        console.log(`Puntuación total calculada: ${total}`);
+        this.totalScore = total;
+        return total;
     }
     getRankSuffix(rank) {
         if (rank === 1)
@@ -407,6 +476,26 @@ let EventScoringComponent = class EventScoringComponent {
             'bg-info': rank === 3,
             'bg-secondary': rank > 3,
         };
+    }
+    getItemPercentage(itemId) {
+        if (!itemId) {
+            return 0;
+        }
+        const memberBasedScoresGroup = this.scoringForm.get('memberBasedScores');
+        if (!memberBasedScoresGroup) {
+            return 0;
+        }
+        const itemGroup = memberBasedScoresGroup.get(itemId.toString());
+        if (!itemGroup) {
+            return 0;
+        }
+        const matchCount = parseFloat(itemGroup.get('matchCount')?.value) || 0;
+        const totalWithChar = parseFloat(itemGroup.get('totalWithCharacteristic')?.value) || 0;
+        if (totalWithChar === 0) {
+            return 0;
+        }
+        const percentage = (matchCount / totalWithChar) * 100;
+        return Math.round(percentage);
     }
 };
 exports.EventScoringComponent = EventScoringComponent;

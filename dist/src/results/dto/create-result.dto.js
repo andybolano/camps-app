@@ -13,6 +13,7 @@ exports.CreateResultDto = void 0;
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
 const create_result_item_dto_1 = require("./create-result-item.dto");
+const create_result_member_based_item_dto_1 = require("./create-result-member-based-item.dto");
 class CreateResultDto {
 }
 exports.CreateResultDto = CreateResultDto;
@@ -28,11 +29,18 @@ __decorate([
 ], CreateResultDto.prototype, "eventId", void 0);
 __decorate([
     (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.ArrayMinSize)(1),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.ValidateNested)({ each: true }),
     (0, class_transformer_1.Type)(() => create_result_item_dto_1.CreateResultItemDto),
     __metadata("design:type", Array)
 ], CreateResultDto.prototype, "items", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => create_result_member_based_item_dto_1.CreateResultMemberBasedItemDto),
+    __metadata("design:type", Array)
+], CreateResultDto.prototype, "memberBasedItems", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),

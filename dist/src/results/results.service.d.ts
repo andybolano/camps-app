@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { Result } from './entities/result.entity';
 import { ResultItem } from './entities/result-item.entity';
+import { ResultMemberBasedItem } from './entities/result-member-based-item.entity';
 import { CreateResultDto } from './dto/create-result.dto';
 import { UpdateResultDto } from './dto/update-result.dto';
 import { ClubsService } from '../clubs/clubs.service';
@@ -8,9 +9,10 @@ import { EventsService } from '../events/events.service';
 export declare class ResultsService {
     private resultsRepository;
     private resultItemsRepository;
+    private resultMemberBasedItemsRepository;
     private clubsService;
     private eventsService;
-    constructor(resultsRepository: Repository<Result>, resultItemsRepository: Repository<ResultItem>, clubsService: ClubsService, eventsService: EventsService);
+    constructor(resultsRepository: Repository<Result>, resultItemsRepository: Repository<ResultItem>, resultMemberBasedItemsRepository: Repository<ResultMemberBasedItem>, clubsService: ClubsService, eventsService: EventsService);
     create(createResultDto: CreateResultDto): Promise<Result>;
     findAll(): Promise<Result[]>;
     findOne(id: number): Promise<Result>;

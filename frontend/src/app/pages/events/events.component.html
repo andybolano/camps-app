@@ -62,7 +62,12 @@
               type="button"
               class="btn btn-success"
               [routerLink]="['/camps', campId, 'events', event.id, 'score']"
-              [disabled]="!event.items || event.items.length === 0"
+              [disabled]="
+                !event.items ||
+                event.items.length === 0 &&
+                (!event.memberBasedItems ||
+                event.memberBasedItems.length === 0)
+              "
             >
               Calificar
             </button>

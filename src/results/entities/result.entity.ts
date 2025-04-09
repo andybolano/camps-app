@@ -7,6 +7,7 @@ import {
 } from 'typeorm';
 import { Club } from '../../clubs/entities/club.entity';
 import { ResultItem } from './result-item.entity';
+import { ResultMemberBasedItem } from './result-member-based-item.entity';
 
 @Entity()
 export class Result {
@@ -26,4 +27,13 @@ export class Result {
     cascade: true,
   })
   items: ResultItem[];
+
+  @OneToMany(
+    () => ResultMemberBasedItem,
+    (resultMemberBasedItem) => resultMemberBasedItem.result,
+    {
+      cascade: true,
+    },
+  )
+  memberBasedItems: ResultMemberBasedItem[];
 }

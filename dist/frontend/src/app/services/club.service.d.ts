@@ -1,5 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+export interface MemberCharacteristic {
+    id?: number;
+    name: string;
+    value: number;
+    matchCount?: number;
+}
 export interface Club {
     id: number;
     name: string;
@@ -16,6 +22,7 @@ export interface Club {
         id: number;
         name: string;
     };
+    memberCharacteristics?: MemberCharacteristic[];
 }
 export interface CreateClubDto {
     name: string;
@@ -29,6 +36,7 @@ export interface CreateClubDto {
     isPaid?: boolean;
     shieldUrl?: string;
     campId: number;
+    memberCharacteristics?: Omit<MemberCharacteristic, 'id'>[];
 }
 export declare class ClubService {
     private http;

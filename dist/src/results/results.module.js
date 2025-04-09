@@ -9,10 +9,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResultsModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
-const results_service_1 = require("./results.service");
 const results_controller_1 = require("./results.controller");
+const results_service_1 = require("./results.service");
 const result_entity_1 = require("./entities/result.entity");
 const result_item_entity_1 = require("./entities/result-item.entity");
+const result_member_based_item_entity_1 = require("./entities/result-member-based-item.entity");
 const clubs_module_1 = require("../clubs/clubs.module");
 const events_module_1 = require("../events/events.module");
 let ResultsModule = class ResultsModule {
@@ -21,7 +22,7 @@ exports.ResultsModule = ResultsModule;
 exports.ResultsModule = ResultsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([result_entity_1.Result, result_item_entity_1.ResultItem]),
+            typeorm_1.TypeOrmModule.forFeature([result_entity_1.Result, result_item_entity_1.ResultItem, result_member_based_item_entity_1.ResultMemberBasedItem]),
             clubs_module_1.ClubsModule,
             (0, common_1.forwardRef)(() => events_module_1.EventsModule),
         ],

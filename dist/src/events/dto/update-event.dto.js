@@ -13,6 +13,8 @@ exports.UpdateEventDto = void 0;
 const class_transformer_1 = require("class-transformer");
 const class_validator_1 = require("class-validator");
 const update_event_item_dto_1 = require("./update-event-item.dto");
+const create_event_dto_1 = require("./create-event.dto");
+const update_member_based_event_item_dto_1 = require("./update-member-based-event-item.dto");
 class UpdateEventDto {
 }
 exports.UpdateEventDto = UpdateEventDto;
@@ -32,10 +34,22 @@ __decorate([
     __metadata("design:type", Number)
 ], UpdateEventDto.prototype, "campId", void 0);
 __decorate([
+    (0, class_validator_1.IsEnum)(create_event_dto_1.EventType),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateEventDto.prototype, "type", void 0);
+__decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsArray)(),
     (0, class_validator_1.ValidateNested)({ each: true }),
     (0, class_transformer_1.Type)(() => update_event_item_dto_1.UpdateEventItemDto),
     __metadata("design:type", Array)
 ], UpdateEventDto.prototype, "items", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => update_member_based_event_item_dto_1.UpdateMemberBasedEventItemDto),
+    __metadata("design:type", Array)
+], UpdateEventDto.prototype, "memberBasedItems", void 0);
 //# sourceMappingURL=update-event.dto.js.map
