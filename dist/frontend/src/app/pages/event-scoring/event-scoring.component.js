@@ -47,6 +47,16 @@ let EventScoringComponent = class EventScoringComponent {
                 if (clubId) {
                     this.selectedClubId = clubId;
                     this.checkExistingResult(this.eventId, clubId);
+                    this.updateCurrentRank();
+                    if (this.event?.type === 'MEMBER_BASED') {
+                        this.loadClubData(clubId);
+                    }
+                }
+                else {
+                    this.selectedClubId = null;
+                    this.existingResult = null;
+                    this.totalScore = 0;
+                    this.currentRank = 0;
                 }
             });
         });
@@ -61,6 +71,9 @@ let EventScoringComponent = class EventScoringComponent {
                 this.selectedClubId = clubId;
                 this.checkExistingResult(this.eventId, clubId);
                 this.updateCurrentRank();
+                if (this.event?.type === 'MEMBER_BASED') {
+                    this.loadClubData(clubId);
+                }
             }
             else {
                 this.selectedClubId = null;
@@ -157,7 +170,10 @@ let EventScoringComponent = class EventScoringComponent {
             console.log(`Añadiendo control para item basado en miembros id=${item.id}, nombre=${item.name}`);
             const itemGroup = this.fb.group({
                 matchCount: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
-                totalWithCharacteristic: [0, [forms_1.Validators.required, forms_1.Validators.min(0)]],
+                totalWithCharacteristic: [
+                    { value: 0, disabled: true },
+                    [forms_1.Validators.required, forms_1.Validators.min(0)],
+                ],
             });
             memberBasedScoresGroup.addControl(item.id.toString(), itemGroup);
         });
@@ -265,9 +281,13 @@ let EventScoringComponent = class EventScoringComponent {
                     if (itemGroup) {
                         console.log(`Asignando valores matchCount=${score.matchCount}, totalWithCharacteristic=${score.totalWithCharacteristic} al item ${score.eventItemId}`);
                         itemGroup.get('matchCount')?.setValue(score.matchCount);
-                        itemGroup
-                            .get('totalWithCharacteristic')
-                            ?.setValue(score.totalWithCharacteristic);
+                        const totalControl = itemGroup.get('totalWithCharacteristic');
+                        if (totalControl) {
+                            totalControl.setValue(score.totalWithCharacteristic, {
+                                emitEvent: false,
+                            });
+                            totalControl.disable({ emitEvent: false });
+                        }
                     }
                     else {
                         console.warn(`No se encontró el grupo para el item basado en miembros ${score.eventItemId}`);
@@ -496,6 +516,69 @@ let EventScoringComponent = class EventScoringComponent {
         }
         const percentage = (matchCount / totalWithChar) * 100;
         return Math.round(percentage);
+    }
+    loadClubData(clubId) {
+        if (!clubId)
+            return;
+        this.isLoading = true;
+        this.clubService.getClub(clubId).subscribe({
+            next: (club) => {
+                console.log('Datos del club cargados:', club);
+                this.updateMemberBasedFormWithClubData(club);
+                this.isLoading = false;
+            },
+            error: (error) => {
+                console.error('Error al cargar datos del club:', error);
+                this.errorMessage = `Error al cargar datos del club: ${error.message}`;
+                this.isLoading = false;
+            },
+        });
+    }
+    updateMemberBasedFormWithClubData(club) {
+        if (!this.event?.memberBasedItems ||
+            this.event.memberBasedItems.length === 0 ||
+            !club) {
+            return;
+        }
+        const memberBasedScoresGroup = this.scoringForm.get('memberBasedScores');
+        if (!memberBasedScoresGroup) {
+            console.warn('No se encontró el grupo de memberBasedScores en el formulario');
+            return;
+        }
+        this.event.memberBasedItems.forEach((item) => {
+            if (item.id &&
+                item.applicableCharacteristics &&
+                item.applicableCharacteristics.length > 0) {
+                const itemGroup = memberBasedScoresGroup.get(item.id.toString());
+                if (!itemGroup)
+                    return;
+                let totalValue = 0;
+                const characteristicsFound = [];
+                item.applicableCharacteristics.forEach((characteristic) => {
+                    if (characteristic in club) {
+                        const charValue = club[characteristic] || 0;
+                        totalValue += charValue;
+                        characteristicsFound.push(characteristic);
+                        console.log(`Característica ${characteristic} encontrada en club con valor: ${charValue}`);
+                    }
+                    else {
+                        console.warn(`La característica ${characteristic} no se encontró en los datos del club`);
+                    }
+                });
+                if (characteristicsFound.length > 0) {
+                    const totalControl = itemGroup.get('totalWithCharacteristic');
+                    if (totalControl) {
+                        totalControl.setValue(totalValue, { emitEvent: false });
+                        totalControl.disable({ emitEvent: false });
+                    }
+                    if (!this.existingResult) {
+                        itemGroup.get('matchCount')?.setValue(totalValue);
+                    }
+                    console.log(`Total de características (${characteristicsFound.join(', ')}): ${totalValue}`);
+                }
+            }
+        });
+        this.calculateTotalScore();
     }
 };
 exports.EventScoringComponent = EventScoringComponent;

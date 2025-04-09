@@ -64,6 +64,16 @@ export class EventScoringComponent implements OnInit {
         if (clubId) {
           this.selectedClubId = clubId;
           this.checkExistingResult(this.eventId, clubId);
+          this.updateCurrentRank(); // Actualizar el ranking cuando cambia el club
+          // Si es evento basado en miembros, actualizar con datos del club
+          if (this.event?.type === 'MEMBER_BASED') {
+            this.loadClubData(clubId);
+          }
+        } else {
+          this.selectedClubId = null;
+          this.existingResult = null;
+          this.totalScore = 0;
+          this.currentRank = 0; // Reiniciar el ranking
         }
       });
     });
@@ -81,6 +91,11 @@ export class EventScoringComponent implements OnInit {
         this.selectedClubId = clubId;
         this.checkExistingResult(this.eventId, clubId);
         this.updateCurrentRank(); // Actualizar el ranking cuando cambia el club
+        
+        // Si es evento basado en miembros, actualizar con datos del club
+        if (this.event?.type === 'MEMBER_BASED') {
+          this.loadClubData(clubId);
+        }
       } else {
         this.selectedClubId = null;
         this.existingResult = null;
@@ -217,7 +232,10 @@ export class EventScoringComponent implements OnInit {
       // Crear un grupo para cada item con controles para matchCount y totalWithCharacteristic
       const itemGroup = this.fb.group({
         matchCount: [0, [Validators.required, Validators.min(0)]],
-        totalWithCharacteristic: [0, [Validators.required, Validators.min(0)]],
+        totalWithCharacteristic: [
+          { value: 0, disabled: true },
+          [Validators.required, Validators.min(0)],
+        ],
       });
 
       // Añadir el grupo al grupo principal de scores basados en miembros
@@ -372,9 +390,16 @@ export class EventScoringComponent implements OnInit {
               `Asignando valores matchCount=${score.matchCount}, totalWithCharacteristic=${score.totalWithCharacteristic} al item ${score.eventItemId}`,
             );
             itemGroup.get('matchCount')?.setValue(score.matchCount);
-            itemGroup
-              .get('totalWithCharacteristic')
-              ?.setValue(score.totalWithCharacteristic);
+
+            // Usar el método correcto para establecer el valor del control deshabilitado
+            const totalControl = itemGroup.get('totalWithCharacteristic');
+            if (totalControl) {
+              totalControl.setValue(score.totalWithCharacteristic, {
+                emitEvent: false,
+              });
+              // Asegurarse de que esté deshabilitado
+              totalControl.disable({ emitEvent: false });
+            }
           } else {
             console.warn(
               `No se encontró el grupo para el item basado en miembros ${score.eventItemId}`,
@@ -698,5 +723,104 @@ export class EventScoringComponent implements OnInit {
 
     const percentage = (matchCount / totalWithChar) * 100;
     return Math.round(percentage);
+  }
+
+  // Método para cargar datos de un club específico
+  private loadClubData(clubId: number): void {
+    if (!clubId) return;
+
+    this.isLoading = true;
+    this.clubService.getClub(clubId).subscribe({
+      next: (club) => {
+        console.log('Datos del club cargados:', club);
+        this.updateMemberBasedFormWithClubData(club);
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error al cargar datos del club:', error);
+        this.errorMessage = `Error al cargar datos del club: ${error.message}`;
+        this.isLoading = false;
+      },
+    });
+  }
+
+  // Actualizar el formulario con datos del club para eventos basados en miembros
+  private updateMemberBasedFormWithClubData(club: Club): void {
+    if (
+      !this.event?.memberBasedItems ||
+      this.event.memberBasedItems.length === 0 ||
+      !club
+    ) {
+      return;
+    }
+
+    const memberBasedScoresGroup = this.scoringForm.get(
+      'memberBasedScores',
+    ) as FormGroup;
+    if (!memberBasedScoresGroup) {
+      console.warn(
+        'No se encontró el grupo de memberBasedScores en el formulario',
+      );
+      return;
+    }
+
+    // Para cada item basado en miembros, actualizar el formulario con los datos del club
+    this.event.memberBasedItems.forEach((item) => {
+      if (
+        item.id &&
+        item.applicableCharacteristics &&
+        item.applicableCharacteristics.length > 0
+      ) {
+        const itemGroup = memberBasedScoresGroup.get(
+          item.id.toString(),
+        ) as FormGroup;
+        if (!itemGroup) return;
+
+        // Sumar todas las características aplicables
+        let totalValue = 0;
+        const characteristicsFound: string[] = [];
+
+        // Iterar por todas las características aplicables
+        item.applicableCharacteristics.forEach((characteristic) => {
+          // Si el club tiene la característica mencionada, sumar su valor al total
+          if (characteristic in club) {
+            const charValue = (club as any)[characteristic] || 0;
+            totalValue += charValue;
+            characteristicsFound.push(characteristic);
+            console.log(
+              `Característica ${characteristic} encontrada en club con valor: ${charValue}`,
+            );
+          } else {
+            console.warn(
+              `La característica ${characteristic} no se encontró en los datos del club`,
+            );
+          }
+        });
+        
+        // Actualizar el formulario con la suma de valores
+        if (characteristicsFound.length > 0) {
+          // Obtener el control y establecer el valor aunque esté deshabilitado
+          const totalControl = itemGroup.get('totalWithCharacteristic');
+          if (totalControl) {
+            totalControl.setValue(totalValue, { emitEvent: false });
+            // Asegurarse de que esté deshabilitado
+            totalControl.disable({ emitEvent: false });
+          }
+          
+          // Si no hay un resultado existente, podemos establecer matchCount igual al total
+          // como valor predeterminado (100% de cumplimiento)
+          if (!this.existingResult) {
+            itemGroup.get('matchCount')?.setValue(totalValue);
+          }
+          
+          console.log(
+            `Total de características (${characteristicsFound.join(', ')}): ${totalValue}`,
+          );
+        }
+      }
+    });
+
+    // Recalcular puntuación total
+    this.calculateTotalScore();
   }
 }

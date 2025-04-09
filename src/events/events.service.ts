@@ -367,9 +367,24 @@ export class EventsService {
         // Update existing items
         for (const item of memberBasedItemsToUpdate) {
           const updateData = updatedMemberBasedItemsMap.get(item.id);
-          await this.memberBasedEventItemsRepository.update(
-            item.id,
-            updateData,
+          if (updateData) {
+            // Copy specific properties to avoid duplication issues
+            if (updateData.name) item.name = updateData.name;
+            if (updateData.percentage !== undefined)
+              item.percentage = updateData.percentage;
+            if (updateData.applicableCharacteristics)
+              item.applicableCharacteristics =
+                updateData.applicableCharacteristics;
+            if (updateData.calculationType)
+              item.calculationType = updateData.calculationType;
+            if (updateData.isRequired !== undefined)
+              item.isRequired = updateData.isRequired;
+          }
+        }
+
+        if (memberBasedItemsToUpdate.length > 0) {
+          await this.memberBasedEventItemsRepository.save(
+            memberBasedItemsToUpdate,
           );
         }
 
@@ -387,11 +402,32 @@ export class EventsService {
               });
             });
 
-            await this.memberBasedEventItemsRepository.save(newItems);
+            const savedNewItems =
+              await this.memberBasedEventItemsRepository.save(newItems);
+
+            // Update the event's memberBasedItems array - ensure no duplicates by combining unique items
+            const allMemberBasedItems = [
+              ...memberBasedItemsToUpdate,
+              ...savedNewItems,
+            ];
+
+            // Use a Map to deduplicate items by ID
+            const uniqueMemberBasedItemsMap = new Map();
+            for (const item of allMemberBasedItems) {
+              uniqueMemberBasedItemsMap.set(item.id, item);
+            }
+
+            // Convert the map values back to an array
+            event.memberBasedItems = Array.from(
+              uniqueMemberBasedItemsMap.values(),
+            );
           } catch (error) {
             console.error('Error creating new member-based items:', error);
             throw new Error('Failed to create new member-based event items');
           }
+        } else if (memberBasedItemsToUpdate.length > 0) {
+          // If we only updated items but didn't create new ones, update the array
+          event.memberBasedItems = [...memberBasedItemsToUpdate];
         }
       } catch (error) {
         if (error instanceof BadRequestException) {

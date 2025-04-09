@@ -187,6 +187,7 @@
                   <li>Para cada ítem, indique el <strong>número de miembros que cumplen la característica</strong> y el <strong>total de miembros con esa característica</strong>.</li>
                   <li>La calificación se calculará automáticamente como la proporción entre ambos valores.</li>
                   <li>Por ejemplo, si hay 10 miembros bautizados y 7 de ellos traen su insignia, la calificación será 7/10 = 70%.</li>
+                  <li><strong>Nota: </strong>Los valores totales se han rellenado automáticamente con la suma de los datos del club para todas las características aplicables.</li>
                 </ul>
               </div>
 
@@ -195,7 +196,15 @@
                   <div class="col-12 mb-2">
                     <h5>{{ item.name }} <small class="text-muted">({{ item.percentage }}%)</small></h5>
                     <div class="text-muted mb-2">
-                      <small>Características aplicables: {{ item.applicableCharacteristics?.join(', ') }}</small>
+                      <small>Características aplicables: 
+                        <span class="badge bg-info me-1" *ngFor="let characteristic of item.applicableCharacteristics">
+                          {{ characteristic === 'minorsCount' ? 'Guias menores' : 
+                             characteristic === 'participantsCount' ? 'Guias bautizado' :
+                             characteristic === 'guestsCount' ? 'Guias no bautizados' :
+                             characteristic === 'economsCount' ? 'Economas' :
+                             characteristic === 'companionsCount' ? 'Acompañantes' : characteristic }}
+                        </span>
+                      </small>
                     </div>
                   </div>
 
@@ -223,21 +232,24 @@
 
                       <div class="col-md-6 mb-3">
                         <label class="form-label">Total de miembros con la característica</label>
-                        <input
-                          type="number"
-                          class="form-control"
-                          formControlName="totalWithCharacteristic"
-                          min="0"
-                          step="1"
-                          [class.is-invalid]="
-                            item.id !== undefined &&
-                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.invalid &&
-                            scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.touched
-                          "
-                          (input)="calculateTotalScore()"
-                        />
-                        <div class="invalid-feedback">
-                          Debe ser un número mayor o igual a 0.
+                        <div class="input-group">
+                          <input
+                            type="number"
+                            class="form-control"
+                            formControlName="totalWithCharacteristic"
+                            [disabled]="true"
+                            min="0"
+                            step="1"
+                            [class.is-invalid]="
+                              item.id !== undefined &&
+                              scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.invalid &&
+                              scoringForm.get('memberBasedScores')?.get(item.id.toString())?.get('totalWithCharacteristic')?.touched
+                            "
+                            (input)="calculateTotalScore()"
+                          />
+                          <div class="invalid-feedback">
+                            Debe ser un número mayor o igual a 0.
+                          </div>
                         </div>
                       </div>
 
@@ -300,7 +312,7 @@
 
         <!-- Mensaje si no hay ítems para calificar -->
         <div
-          *ngIf="event && (!event.items || event.items.length === 0)"
+          *ngIf="event && (!event.items || event.items.length === 0) && (!event.memberBasedItems || event.memberBasedItems.length === 0)"
           class="alert alert-warning"
         >
           Este evento no tiene ítems de calificación definidos. Primero debe

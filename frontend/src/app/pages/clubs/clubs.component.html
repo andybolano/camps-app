@@ -30,11 +30,10 @@
           <th>Escudo</th>
           <th>Nombre</th>
           <th>Ciudad</th>
-          <th>Miembros Bautizados</th>
-          <th>No Bautizados</th>
-          <th>Menores</th>
-          <th>Ecónomas</th>
-          <th>Total</th>
+          <th>Guías Bautizados</th>
+          <th>Guías No Bautizados</th>
+          <th>Guías Menores</th>
+          <th>Total Guías</th>
           <th>Inscripción</th>
           <th>Pagado</th>
           <th>Acciones</th>
@@ -63,9 +62,8 @@
           <td>{{ club.participantsCount }}</td>
           <td>{{ club.guestsCount }}</td>
           <td>{{ club.minorsCount || 0 }}</td>
-          <td>{{ club.economsCount }}</td>
           <td>
-            {{ club.participantsCount + club.guestsCount + club.minorsCount + club.economsCount }}
+            {{ club.participantsCount + club.guestsCount + club.minorsCount }}
           </td>
           <td>{{ club.registrationFee | currency }}</td>
           <td>

@@ -45,4 +45,6 @@ export declare class EventScoringComponent implements OnInit {
     getClubName(clubId: number | null): string;
     getRankBadgeClass(rank: number | undefined): any;
     getItemPercentage(itemId: number | undefined): number;
+    private loadClubData;
+    private updateMemberBasedFormWithClubData;
 }

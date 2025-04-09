@@ -32,11 +32,11 @@ let EventFormComponent = class EventFormComponent {
             { value: 'MEMBER_BASED', label: 'Basado en Características de Miembros' },
         ];
         this.characteristicOptions = [
-            { value: 'minorsCount', label: 'Menores' },
+            { value: 'minorsCount', label: 'Guias menores' },
+            { value: 'participantsCount', label: 'Guias bautizados' },
+            { value: 'guestsCount', label: 'Guias no bautizados' },
             { value: 'companionsCount', label: 'Acompañantes' },
-            { value: 'participantsCount', label: 'Participantes' },
-            { value: 'guestsCount', label: 'Invitados' },
-            { value: 'economsCount', label: 'Ecónomos' },
+            { value: 'economsCount', label: 'Economas' },
         ];
     }
     ngOnInit() {

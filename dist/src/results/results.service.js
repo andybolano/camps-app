@@ -32,9 +32,14 @@ let ResultsService = class ResultsService {
     async create(createResultDto) {
         const { clubId, eventId } = createResultDto;
         const items = createResultDto.items || createResultDto.scores;
-        const memberBasedItems = createResultDto.memberBasedItems;
-        if (!items || !Array.isArray(items) || items.length === 0) {
-            throw new common_1.BadRequestException('Items/scores array is required and must not be empty');
+        const memberBasedItems = createResultDto.memberBasedItems ||
+            createResultDto.memberBasedScores;
+        const hasItems = items && Array.isArray(items) && items.length > 0;
+        const hasMemberBasedItems = memberBasedItems &&
+            Array.isArray(memberBasedItems) &&
+            memberBasedItems.length > 0;
+        if (!hasItems && !hasMemberBasedItems) {
+            throw new common_1.BadRequestException('Either items/scores array or memberBasedItems/memberBasedScores array is required and must not be empty');
         }
         const club = await this.clubsService.findOne(clubId);
         const event = await this.eventsService.findOne(eventId);

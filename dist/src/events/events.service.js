@@ -234,7 +234,22 @@ let EventsService = class EventsService {
                 }
                 for (const item of memberBasedItemsToUpdate) {
                     const updateData = updatedMemberBasedItemsMap.get(item.id);
-                    await this.memberBasedEventItemsRepository.update(item.id, updateData);
+                    if (updateData) {
+                        if (updateData.name)
+                            item.name = updateData.name;
+                        if (updateData.percentage !== undefined)
+                            item.percentage = updateData.percentage;
+                        if (updateData.applicableCharacteristics)
+                            item.applicableCharacteristics =
+                                updateData.applicableCharacteristics;
+                        if (updateData.calculationType)
+                            item.calculationType = updateData.calculationType;
+                        if (updateData.isRequired !== undefined)
+                            item.isRequired = updateData.isRequired;
+                    }
+                }
+                if (memberBasedItemsToUpdate.length > 0) {
+                    await this.memberBasedEventItemsRepository.save(memberBasedItemsToUpdate);
                 }
                 if (memberBasedItemsToCreate.length > 0) {
                     try {
@@ -248,12 +263,24 @@ let EventsService = class EventsService {
                                 event: event,
                             });
                         });
-                        await this.memberBasedEventItemsRepository.save(newItems);
+                        const savedNewItems = await this.memberBasedEventItemsRepository.save(newItems);
+                        const allMemberBasedItems = [
+                            ...memberBasedItemsToUpdate,
+                            ...savedNewItems,
+                        ];
+                        const uniqueMemberBasedItemsMap = new Map();
+                        for (const item of allMemberBasedItems) {
+                            uniqueMemberBasedItemsMap.set(item.id, item);
+                        }
+                        event.memberBasedItems = Array.from(uniqueMemberBasedItemsMap.values());
                     }
                     catch (error) {
                         console.error('Error creating new member-based items:', error);
                         throw new Error('Failed to create new member-based event items');
                     }
+                }
+                else if (memberBasedItemsToUpdate.length > 0) {
+                    event.memberBasedItems = [...memberBasedItemsToUpdate];
                 }
             }
             catch (error) {

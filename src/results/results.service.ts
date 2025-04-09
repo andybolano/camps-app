@@ -33,11 +33,20 @@ export class ResultsService {
     const { clubId, eventId } = createResultDto;
     // Manejar tanto 'items' (del DTO) como 'scores' (del cliente)
     const items = createResultDto.items || (createResultDto as any).scores;
-    const memberBasedItems = createResultDto.memberBasedItems;
+    const memberBasedItems =
+      createResultDto.memberBasedItems ||
+      (createResultDto as any).memberBasedScores;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    // Verificar que al menos uno de los arrays (items o memberBasedItems) esté presente y no vacío
+    const hasItems = items && Array.isArray(items) && items.length > 0;
+    const hasMemberBasedItems =
+      memberBasedItems &&
+      Array.isArray(memberBasedItems) &&
+      memberBasedItems.length > 0;
+
+    if (!hasItems && !hasMemberBasedItems) {
       throw new BadRequestException(
-        'Items/scores array is required and must not be empty',
+        'Either items/scores array or memberBasedItems/memberBasedScores array is required and must not be empty',
       );
     }
 
