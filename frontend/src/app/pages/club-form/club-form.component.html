@@ -153,6 +153,32 @@
           </div>
 
           <div class="mb-3">
+            <label for="companionsCount" class="form-label">Número de Acompañantes</label>
+            <input
+              type="number"
+              class="form-control"
+              id="companionsCount"
+              formControlName="companionsCount"
+              min="0"
+              required
+            />
+            <div
+              *ngIf="
+                companionsCount?.invalid &&
+                (companionsCount?.dirty || companionsCount?.touched)
+              "
+              class="text-danger"
+            >
+              <small *ngIf="companionsCount?.errors?.['required']"
+                >El número de acompañantes es requerido</small
+              >
+              <small *ngIf="companionsCount?.errors?.['min']"
+                >El número debe ser mayor o igual a 0</small
+              >
+            </div>
+          </div>
+
+          <div class="mb-3">
             <label for="registrationFee" class="form-label"
               >Valor de Inscripción</label
             >

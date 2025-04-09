@@ -31,6 +31,9 @@ export class Club {
   @Column()
   economsCount: number;
 
+  @Column({ default: 0 })
+  companionsCount: number;
+
   @Column({ type: 'float' })
   registrationFee: number;
 

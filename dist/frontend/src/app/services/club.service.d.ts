@@ -8,6 +8,7 @@ export interface Club {
     guestsCount: number;
     minorsCount: number;
     economsCount: number;
+    companionsCount: number;
     registrationFee: number;
     isPaid: boolean;
     shieldUrl?: string;
@@ -23,6 +24,7 @@ export interface CreateClubDto {
     guestsCount: number;
     minorsCount: number;
     economsCount: number;
+    companionsCount: number;
     registrationFee: number;
     isPaid?: boolean;
     shieldUrl?: string;

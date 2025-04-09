@@ -35,6 +35,10 @@ export class CreateClubDto {
 
   @IsNumber()
   @IsPositive()
+  companionsCount: number;
+
+  @IsNumber()
+  @IsPositive()
   registrationFee: number;
 
   @IsOptional()

@@ -11,6 +11,7 @@ export interface Club {
   guestsCount: number;
   minorsCount: number;
   economsCount: number;
+  companionsCount: number;
   registrationFee: number;
   isPaid: boolean;
   shieldUrl?: string;
@@ -27,6 +28,7 @@ export interface CreateClubDto {
   guestsCount: number;
   minorsCount: number;
   economsCount: number;
+  companionsCount: number;
   registrationFee: number;
   isPaid?: boolean;
   shieldUrl?: string;
@@ -79,6 +81,7 @@ export class ClubService {
     formData.append('guestsCount', club.guestsCount.toString());
     formData.append('minorsCount', club.minorsCount.toString());
     formData.append('economsCount', club.economsCount.toString());
+    formData.append('companionsCount', club.companionsCount.toString());
     formData.append('registrationFee', club.registrationFee.toString());
     formData.append('campId', club.campId.toString());
 
@@ -116,6 +119,8 @@ export class ClubService {
       formData.append('minorsCount', club.minorsCount.toString());
     if (club.economsCount !== undefined)
       formData.append('economsCount', club.economsCount.toString());
+    if (club.companionsCount !== undefined)
+      formData.append('companionsCount', club.companionsCount.toString());
     if (club.registrationFee !== undefined)
       formData.append('registrationFee', club.registrationFee.toString());
     if (club.isPaid !== undefined)

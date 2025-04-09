@@ -8,6 +8,7 @@ export declare class Club {
     guestsCount: number;
     minorsCount: number;
     economsCount: number;
+    companionsCount: number;
     registrationFee: number;
     isPaid: boolean;
     shieldUrl: string;

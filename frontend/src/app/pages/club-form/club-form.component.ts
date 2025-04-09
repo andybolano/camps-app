@@ -67,6 +67,7 @@ export class ClubFormComponent implements OnInit {
       guestsCount: [0, [Validators.required, Validators.min(0)]],
       minorsCount: [0, [Validators.required, Validators.min(0)]],
       economsCount: [0, [Validators.required, Validators.min(0)]],
+      companionsCount: [0, [Validators.required, Validators.min(0)]],
       registrationFee: [0, [Validators.required, Validators.min(0)]],
       isPaid: [false],
     });
@@ -95,6 +96,7 @@ export class ClubFormComponent implements OnInit {
           guestsCount: club.guestsCount,
           minorsCount: club.minorsCount || 0,
           economsCount: club.economsCount,
+          companionsCount: club.companionsCount || 0,
           registrationFee: club.registrationFee,
           isPaid: club.isPaid,
         });
@@ -206,6 +208,9 @@ export class ClubFormComponent implements OnInit {
   }
   get economsCount() {
     return this.clubForm.get('economsCount');
+  }
+  get companionsCount() {
+    return this.clubForm.get('companionsCount');
   }
   get registrationFee() {
     return this.clubForm.get('registrationFee');
