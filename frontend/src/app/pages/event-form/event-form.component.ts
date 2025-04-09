@@ -128,8 +128,6 @@ export class EventFormComponent implements OnInit {
               item.name,
               item.percentage,
               item.applicableCharacteristics,
-              item.calculationType,
-              item.isRequired,
             );
           });
         }
@@ -171,8 +169,6 @@ export class EventFormComponent implements OnInit {
     name: string = '',
     percentage: number = 0,
     applicableCharacteristics: string[] = [],
-    calculationType: string = 'PROPORTION',
-    isRequired: boolean = false,
   ): void {
     const itemForm = this.fb.group({
       name: [name, Validators.required],
@@ -185,7 +181,6 @@ export class EventFormComponent implements OnInit {
         [Validators.required, Validators.minLength(1)],
       ],
       calculationType: ['TOTAL', Validators.required],
-      isRequired: [isRequired],
     });
 
     this.memberBasedItems.push(itemForm);

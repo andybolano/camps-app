@@ -33,7 +33,7 @@ export declare class EventFormComponent implements OnInit {
     get memberBasedItems(): FormArray;
     get eventType(): string;
     addItem(name?: string, percentage?: number): void;
-    addMemberBasedItem(name?: string, percentage?: number, applicableCharacteristics?: string[], calculationType?: string, isRequired?: boolean): void;
+    addMemberBasedItem(name?: string, percentage?: number, applicableCharacteristics?: string[]): void;
     removeItem(index: number): void;
     removeMemberBasedItem(index: number): void;
     clearItems(): void;

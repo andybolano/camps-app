@@ -94,7 +94,7 @@ let EventFormComponent = class EventFormComponent {
                 if (event.memberBasedItems && event.memberBasedItems.length > 0) {
                     this.clearMemberBasedItems();
                     event.memberBasedItems.forEach((item) => {
-                        this.addMemberBasedItem(item.name, item.percentage, item.applicableCharacteristics, item.calculationType, item.isRequired);
+                        this.addMemberBasedItem(item.name, item.percentage, item.applicableCharacteristics);
                     });
                 }
                 this.isLoading = false;
@@ -124,7 +124,7 @@ let EventFormComponent = class EventFormComponent {
         });
         this.items.push(itemForm);
     }
-    addMemberBasedItem(name = '', percentage = 0, applicableCharacteristics = [], calculationType = 'PROPORTION', isRequired = false) {
+    addMemberBasedItem(name = '', percentage = 0, applicableCharacteristics = []) {
         const itemForm = this.fb.group({
             name: [name, forms_1.Validators.required],
             percentage: [
@@ -136,7 +136,6 @@ let EventFormComponent = class EventFormComponent {
                 [forms_1.Validators.required, forms_1.Validators.minLength(1)],
             ],
             calculationType: ['TOTAL', forms_1.Validators.required],
-            isRequired: [isRequired],
         });
         this.memberBasedItems.push(itemForm);
     }
